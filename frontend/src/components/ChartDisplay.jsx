@@ -1,4 +1,6 @@
-function ChartDisplay({ series, status }) {
+function ChartDisplay({ series, status, selectionLabel }) {
+  const readableLabel = selectionLabel || series?.name?.split("-").join(" ");
+
   if (status.state === "loading") {
     return (
       <div className="chart-display">
@@ -28,7 +30,7 @@ function ChartDisplay({ series, status }) {
   return (
     <div className="chart-display">
       <div className="chart-header">
-        <h3>{series.name.split("-").join(" ")}</h3>
+        <h3>{readableLabel}</h3>
         <p>
           Latest observation ({latestPoint.timestamp}):
           <strong> {latestPoint.value.toFixed(2)} oz of gold</strong>
@@ -38,7 +40,7 @@ function ChartDisplay({ series, status }) {
         <thead>
           <tr>
             <th scope="col">Month</th>
-            <th scope="col">Ratio (S&amp;P 500 ÷ Gold)</th>
+            <th scope="col">Ratio ({readableLabel})</th>
           </tr>
         </thead>
         <tbody>
@@ -51,9 +53,8 @@ function ChartDisplay({ series, status }) {
         </tbody>
       </table>
       <p className="chart-footnote">
-        Prototype data uses 2023 month-end closes for the S&amp;P 500 index and
-        gold spot price. Interactive charting will replace this table in future
-        iterations.
+        Prototype data uses month-end closes for the selected basket and will be
+        replaced by interactive charting in future iterations.
       </p>
     </div>
   );
