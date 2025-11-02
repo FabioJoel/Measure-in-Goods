@@ -91,6 +91,13 @@ function App() {
       : fallback;
   });
   const [series, setSeries] = useState(null);
+  const [selectedAssetId, setSelectedAssetId] = useState(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    return window.localStorage.getItem("selectedAssetId");
+  });
   const [status, setStatus] = useState({ state: "loading", message: "" });
   const [selectedIndex, setSelectedIndex] = useState(getInitialIndex);
 
@@ -174,6 +181,16 @@ function App() {
       return;
     }
 
+    if (selectedAssetId) {
+      window.localStorage.setItem("selectedAssetId", selectedAssetId);
+    } else {
+      window.localStorage.removeItem("selectedAssetId");
+    }
+  }, [selectedAssetId]);
+
+  const handleAssetChange = (assetId) => {
+    setSelectedAssetId(assetId);
+  };
     const params = new URLSearchParams();
 
     selectedAssets.forEach((asset) => params.append("asset", asset));
@@ -228,6 +245,7 @@ function App() {
       <main className="app-grid">
         <section className="panel">
           <h2>Assets</h2>
+          <AssetSelector value={selectedAssetId} onChange={handleAssetChange} />
           <AssetSelector
             selectedAssets={selectedAssets}
             onSelectionChange={setSelectedAssets}
