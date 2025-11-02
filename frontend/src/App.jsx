@@ -8,197 +8,71 @@ import BasketSelector, {
 } from "./components/BasketSelector.jsx";
 import ChartDisplay from "./components/ChartDisplay.jsx";
 
-function normalizeSeries(meta, data) {
-  const identifier = meta?.id ?? meta?.series_id ?? meta?.name ?? "series";
-  const label = meta?.label ?? meta?.name ?? identifier;
-
-  const rawPoints = Array.isArray(data) ? data : data?.points ?? [];
-
-  const points = rawPoints
-    .map((point) => {
-      if (Array.isArray(point)) {
-        const [timestamp, value] = point;
-        return {
-          timestamp,
-          value: typeof value === "number" ? value : Number(value ?? NaN),
-        };
-      }
-
-      const timestamp = point?.timestamp ?? point?.date ?? point?.time;
-      const value = point?.value ?? point?.amount ?? point?.ratio;
-
-      return {
-        timestamp,
-        value: typeof value === "number" ? value : Number(value ?? NaN),
-      };
-    })
-    .filter(
-      (point) =>
-        Boolean(point.timestamp) && Number.isFinite(point.value ?? Number.NaN)
-    );
-
-  return {
-    id: identifier,
-    name: label,
-    points,
-  };
-}
-const INDEX_OPTIONS = [
-  { id: "balanced_v1", label: "Balanced v1" },
-  { id: "energy_heavy_v1", label: "Energy Heavy v1" },
-  { id: "metals_only_v1", label: "Metals Only v1" },
-  { id: "cpi_us_passthrough", label: "CPI (US) passthrough" },
-  { id: "hicp_ea_passthrough", label: "HICP (EA) passthrough" }
+const REFERENCE_INDEXES = [
+  {
+    id: "sp500-gold",
+    label: "S&P 500 priced in gold",
+    endpoint: "/ratios/sp500-gold",
+  },
 ];
 
-const getInitialIndex = () => {
-  const fallback = INDEX_OPTIONS[0].id;
-  if (typeof window === "undefined") {
-    return fallback;
-  }
-
-  const params = new URLSearchParams(window.location.search);
-  const requested = params.get("index");
-  return INDEX_OPTIONS.some((option) => option.id === requested)
-    ? requested
-    : fallback;
-};
-
 function App() {
-  const [initialUrlState] = useState(() => {
-    if (typeof window === "undefined") {
-      return {
-        assets: [],
-        basket: null,
-        dateParams: {},
-        mode: "search",
-        originalHash: "",
-      };
-    }
-
-    const search = window.location.search.slice(1);
-    const hash = window.location.hash.startsWith("#")
-      ? window.location.hash.slice(1)
-      : window.location.hash;
-    const mode = search ? "search" : hash ? "hash" : "search";
-    const source = mode === "hash" ? hash : search;
-    const params = new URLSearchParams(source);
-
-    const assetValues = params.getAll("asset");
-    const assets = assetValues
-      .flatMap((value) => value.split(","))
-      .map((value) => value.trim())
-      .filter(Boolean);
-
-    const basket = params.get("basket");
-    const dateParams = {
-      start: params.get("start") ?? "",
-      end: params.get("end") ?? "",
-      date: params.get("date") ?? "",
-    };
-
-    return {
-      assets,
-      basket,
-      dateParams,
-      mode,
-      originalHash: mode === "hash" ? "" : window.location.hash,
-    };
-  });
-
-  const availableAssetIds = useMemo(
-    () => new Set(AVAILABLE_ASSETS.map((asset) => asset.id)),
-    []
+  const [selectedAsset, setSelectedAsset] = useState(
+    () => AVAILABLE_ASSETS[0]?.id ?? null
   );
-
-  const [selectedAssets, setSelectedAssets] = useState(() =>
-    initialUrlState.assets.filter((id) => availableAssetIds.has(id))
+  const [activeBasket, setActiveBasket] = useState(
+    () => PRESET_BASKETS[0]?.id ?? null
   );
-  const [activeBasket, setActiveBasket] = useState(() => {
-    const fallback = PRESET_BASKETS[0]?.id ?? null;
-
-    if (!initialUrlState.basket) {
-      return fallback;
-    }
-
-    return PRESET_BASKETS.some((basket) => basket.id === initialUrlState.basket)
-      ? initialUrlState.basket
-      : fallback;
-  });
+  const [selectedIndex, setSelectedIndex] = useState(REFERENCE_INDEXES[0].id);
   const [series, setSeries] = useState(null);
-  const [seriesMeta, setSeriesMeta] = useState(null);
-  const [selectedAssetId, setSelectedAssetId] = useState(() => {
-    if (typeof window === "undefined") {
-      return null;
-    }
-
-    return window.localStorage.getItem("selectedAssetId");
+  const [status, setStatus] = useState({
+    state: "loading",
+    message: "Loading data…",
   });
-  const [status, setStatus] = useState({ state: "loading", message: "" });
-  const [selectedIndex, setSelectedIndex] = useState(getInitialIndex);
 
   const apiBaseUrl = useMemo(
     () => import.meta.env.VITE_API_URL ?? "http://localhost:8000",
     []
   );
 
-  const defaultQuery = useMemo(
-    () => ({
-      asset: "sp500",
-      basket: "gold",
-      start: "2023-01-01",
-      end: "2023-12-31",
-      freq: "monthly",
-      rebase: "none",
-      use: "ratio",
-      interp: "none",
-    }),
-    []
-  );
-
-  const requestUrl = useMemo(() => {
-    const params = new URLSearchParams();
-
-    Object.entries(defaultQuery).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== "") {
-        params.set(key, value);
-      }
-    });
-
-    return `${apiBaseUrl}/api/v1/series?${params.toString()}`;
-  }, [apiBaseUrl, defaultQuery]);
-  const selectedOption = useMemo(
+  const activeIndexOption = useMemo(
     () =>
-      INDEX_OPTIONS.find((option) => option.id === selectedIndex) ??
-      INDEX_OPTIONS[0],
+      REFERENCE_INDEXES.find((option) => option.id === selectedIndex) ??
+      REFERENCE_INDEXES[0],
     [selectedIndex]
   );
 
-  const selectionLabel = selectedOption.label;
+  const activeAssetOption = useMemo(
+    () => AVAILABLE_ASSETS.find((option) => option.id === selectedAsset),
+    [selectedAsset]
+  );
 
   useEffect(() => {
+    const option = REFERENCE_INDEXES.find((entry) => entry.id === selectedIndex);
+
+    if (!option) {
+      setSeries(null);
+      setStatus({ state: "error", message: "Unknown reference index" });
+      return undefined;
+    }
+
     let cancelled = false;
 
     async function fetchSeries() {
+      setStatus({
+        state: "loading",
+        message: `Loading ${option.label}…`,
+      });
+
       try {
-        setStatus({ state: "loading", message: "Loading ratio…" });
-        const response = await fetch(requestUrl);
-        setStatus({
-          state: "loading",
-          message: `Loading ${selectionLabel} basket…`
-        });
-        const response = await fetch(`${apiBaseUrl}/ratios/${selectedIndex}`);
+        const response = await fetch(`${apiBaseUrl}${option.endpoint}`);
 
         if (!response.ok) {
-          throw new Error(`Request failed with ${response.status}`);
+          throw new Error(`Request failed with status ${response.status}`);
         }
 
         const payload = await response.json();
-        const nextMeta = payload?.meta ?? null;
-        const normalized = normalizeSeries(nextMeta, payload?.data ?? []);
 
-        setSeriesMeta(nextMeta);
-        setSeries(normalized);
         if (cancelled) {
           return;
         }
@@ -210,100 +84,21 @@ function App() {
           return;
         }
 
+        setSeries(null);
         setStatus({
           state: "error",
           message:
-            error instanceof Error ? error.message : "Unable to load basket"
+            error instanceof Error ? error.message : "Unable to load data",
         });
       }
     }
 
     fetchSeries();
-  }, [requestUrl]);
 
     return () => {
       cancelled = true;
     };
-  }, [apiBaseUrl, selectedIndex, selectionLabel]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const params = new URLSearchParams(window.location.search);
-    params.set("index", selectedIndex);
-    const queryString = params.toString();
-    const nextUrl = `${window.location.pathname}${
-      queryString ? `?${queryString}` : ""
-    }`;
-    window.history.replaceState({}, "", nextUrl);
-  }, [selectedIndex]);
-
-  const { mode: urlMode, originalHash, dateParams } = initialUrlState;
-  const initialStart = dateParams.start;
-  const initialEnd = dateParams.end;
-  const initialDate = dateParams.date;
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    if (selectedAssetId) {
-      window.localStorage.setItem("selectedAssetId", selectedAssetId);
-    } else {
-      window.localStorage.removeItem("selectedAssetId");
-    }
-  }, [selectedAssetId]);
-
-  const handleAssetChange = (assetId) => {
-    setSelectedAssetId(assetId);
-  };
-    const params = new URLSearchParams();
-
-    selectedAssets.forEach((asset) => params.append("asset", asset));
-
-    if (activeBasket) {
-      params.set("basket", activeBasket);
-    }
-
-    if (initialStart) {
-      params.set("start", initialStart);
-    }
-
-    if (initialEnd) {
-      params.set("end", initialEnd);
-    }
-
-    if (initialDate) {
-      params.set("date", initialDate);
-    }
-
-    const queryString = params.toString();
-
-    if (urlMode === "hash") {
-      const newUrl = `${window.location.pathname}${
-        queryString ? `#${queryString}` : ""
-      }`;
-      window.history.replaceState(null, "", newUrl);
-      return;
-    }
-
-    const newUrl = `${window.location.pathname}${
-      queryString ? `?${queryString}` : ""
-    }${originalHash ?? ""}`;
-
-    window.history.replaceState(null, "", newUrl);
-  }, [
-    selectedAssets,
-    activeBasket,
-    urlMode,
-    originalHash,
-    initialStart,
-    initialEnd,
-    initialDate,
-  ]);
+  }, [apiBaseUrl, selectedIndex]);
 
   return (
     <div className="app-shell">
@@ -314,11 +109,17 @@ function App() {
       <main className="app-grid">
         <section className="panel">
           <h2>Assets</h2>
-          <AssetSelector value={selectedAssetId} onChange={handleAssetChange} />
           <AssetSelector
-            selectedAssets={selectedAssets}
-            onSelectionChange={setSelectedAssets}
+            selectedAsset={selectedAsset}
+            onSelectionChange={setSelectedAsset}
           />
+          <p className="panel-footnote">
+            {selectedAsset
+              ? `Tracking asset: ${
+                  activeAssetOption?.label ?? selectedAsset
+                }`
+              : "Select an asset to include in your custom basket."}
+          </p>
         </section>
         <section className="panel">
           <h2>Basket</h2>
@@ -326,19 +127,26 @@ function App() {
             activeBasket={activeBasket}
             onSelect={setActiveBasket}
           />
+          <p className="panel-footnote">
+            {activeBasket
+              ? `Active basket template: ${activeBasket}`
+              : "Choose a basket template to explore weighting approaches."}
+          </p>
         </section>
         <section className="panel full-width">
-          <h2>Chart</h2>
-          <ChartDisplay meta={seriesMeta} series={series} status={status} />
+          <h2>Reference index</h2>
           <ChartDisplay
             series={series}
             status={status}
-            selectionLabel={selectionLabel}
+            meta={{ name: activeIndexOption?.label ?? series?.name ?? "" }}
           />
           <div className="panel-subsection">
-            <h3>Reference baskets</h3>
+            <h3>Available ratios</h3>
             <BasketSelector
-              options={INDEX_OPTIONS}
+              options={REFERENCE_INDEXES.map(({ id, label }) => ({
+                id,
+                label,
+              }))}
               activeBasket={selectedIndex}
               onSelect={setSelectedIndex}
             />
