@@ -31,6 +31,12 @@ curl http://localhost:8000/ratios/sp500-gold
 
 ### Frontend
 
+Install [Node.js](https://nodejs.org/) if you do not already have it—this also
+installs the `npm` package manager. On macOS you can use Homebrew
+(`brew install node`), while Windows users can install from the Node.js
+installer. After installation, verify that both `node` and `npm` are available
+by running `node --version` and `npm --version` in your terminal.
+
 ```bash
 cd frontend
 npm install
