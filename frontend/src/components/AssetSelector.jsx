@@ -1,29 +1,28 @@
-import { useState } from "react";
-
-const AVAILABLE_ASSETS = [
+export const AVAILABLE_ASSETS = [
   { id: "CPIAUCSL", label: "US CPI - All Urban Consumers" },
   { id: "CPALTT01USM661S", label: "US Consumer Price Index" },
   { id: "WPIACO", label: "World Commodity Price Index" }
 ];
 
-function AssetSelector() {
-  const [selected, setSelected] = useState([]);
-
+function AssetSelector({ selectedAssets = [], onSelectionChange = () => {} }) {
   const toggleAsset = (assetId) => {
-    setSelected((current) =>
-      current.includes(assetId)
-        ? current.filter((id) => id !== assetId)
-        : [...current, assetId]
-    );
+    const nextSelection = selectedAssets.includes(assetId)
+      ? selectedAssets.filter((id) => id !== assetId)
+      : [...selectedAssets, assetId];
+
+    onSelectionChange(nextSelection);
   };
 
   return (
     <div className="asset-selector">
       {AVAILABLE_ASSETS.map((asset) => (
-        <label key={asset.id} className={selected.includes(asset.id) ? "selected" : ""}>
+        <label
+          key={asset.id}
+          className={selectedAssets.includes(asset.id) ? "selected" : ""}
+        >
           <input
             type="checkbox"
-            checked={selected.includes(asset.id)}
+            checked={selectedAssets.includes(asset.id)}
             onChange={() => toggleAsset(asset.id)}
           />
           <span>{asset.label}</span>
