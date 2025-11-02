@@ -1,7 +1,14 @@
 import { useRef } from "react";
+
 import Pill from "./Pill.jsx";
 
-function BasketSelector({ options = [], activeBasket, onSelect = () => {} }) {
+export const PRESET_BASKETS = [
+  { id: "everyday", label: "Everyday essentials" },
+  { id: "housing", label: "Housing & utilities" },
+  { id: "global", label: "Global commodity blend" },
+];
+
+function BasketSelector({ options = PRESET_BASKETS, activeBasket, onSelect }) {
   if (!options.length) {
     return null;
   }
@@ -28,22 +35,22 @@ function BasketSelector({ options = [], activeBasket, onSelect = () => {} }) {
       event.preventDefault();
       const nextIndex = getNextIndex(index, "forward");
       const nextOption = options[nextIndex];
-      onSelect(nextOption.id);
+      onSelect?.(nextOption.id);
       focusTab(nextIndex);
     } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
       event.preventDefault();
       const previousIndex = getNextIndex(index, "backward");
       const previousOption = options[previousIndex];
-      onSelect(previousOption.id);
+      onSelect?.(previousOption.id);
       focusTab(previousIndex);
     } else if (event.key === "Home") {
       event.preventDefault();
-      onSelect(options[0].id);
+      onSelect?.(options[0].id);
       focusTab(0);
     } else if (event.key === "End") {
       event.preventDefault();
       const lastIndex = options.length - 1;
-      onSelect(options[lastIndex].id);
+      onSelect?.(options[lastIndex].id);
       focusTab(lastIndex);
     }
   };
@@ -52,7 +59,7 @@ function BasketSelector({ options = [], activeBasket, onSelect = () => {} }) {
     <div
       className="basket-selector"
       role="tablist"
-      aria-label="Reference basket indexes"
+      aria-label="Basket options"
       aria-orientation="horizontal"
     >
       {options.map((option, index) => {
@@ -64,7 +71,7 @@ function BasketSelector({ options = [], activeBasket, onSelect = () => {} }) {
             aria-selected={isActive}
             tabIndex={isActive ? 0 : -1}
             active={isActive}
-            onClick={() => onSelect(option.id)}
+            onClick={() => onSelect?.(option.id)}
             onKeyDown={(event) => handleKeyDown(event, index)}
             ref={(node) => {
               tabRefs.current[index] = node;
@@ -74,28 +81,6 @@ function BasketSelector({ options = [], activeBasket, onSelect = () => {} }) {
           </Pill>
         );
       })}
-export const PRESET_BASKETS = [
-  { id: "everyday", label: "Everyday Essentials" },
-  { id: "housing", label: "Housing & Utilities" },
-  { id: "global", label: "Global Commodity Blend" }
-];
-
-function BasketSelector({ activeBasket, onSelect = () => {} }) {
-  const resolvedActive =
-    activeBasket ?? (PRESET_BASKETS.length > 0 ? PRESET_BASKETS[0].id : null);
-
-  return (
-    <div className="basket-selector">
-      {PRESET_BASKETS.map((basket) => (
-        <button
-          key={basket.id}
-          type="button"
-          className={resolvedActive === basket.id ? "active" : ""}
-          onClick={() => onSelect(basket.id)}
-        >
-          {basket.label}
-        </button>
-      ))}
     </div>
   );
 }

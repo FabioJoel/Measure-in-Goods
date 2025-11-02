@@ -108,12 +108,58 @@ textarea {
   letter-spacing: 0.01em;
 }
 
-.asset-selector label {
+.asset-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.asset-selector__search-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.asset-selector__search-input {
+  font: inherit;
+  color: inherit;
+  background: var(--surface-muted);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 0.6rem 1rem;
+  width: 100%;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.asset-selector__search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.asset-selector__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.asset-selector__item {
+  margin: 0;
+}
+
+.asset-selector__empty {
+  padding: 0.75rem 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.asset-selector__option {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  margin-bottom: 0.75rem;
   background: var(--surface-muted);
   border-radius: 12px;
   border: 1px solid var(--border);
@@ -122,25 +168,29 @@ textarea {
   transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
 }
 
-.asset-selector label:hover {
+.asset-selector__option input[type="radio"] {
+  accent-color: var(--accent);
+}
+
+.asset-selector__option:hover {
   transform: translateY(-1px);
   background: color-mix(in srgb, var(--card-bg) 88%, var(--text) 12%);
   transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease,
     transform 150ms ease;
 }
 
-.asset-selector label:hover,
+.asset-selector__option:hover,
 .basket-selector button:hover {
   background: color-mix(in srgb, var(--card-bg) 70%, var(--text) 30%);
 }
 
-.asset-selector label:focus-visible,
+.asset-selector__option:focus-visible,
 .basket-selector button:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent) 80%, var(--text) 20%);
   outline-offset: 2px;
 }
 
-.asset-selector label.selected {
+.asset-selector__option.selected {
   border-color: var(--accent);
   background: var(--surface-active);
 }
