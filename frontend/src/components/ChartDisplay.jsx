@@ -1,4 +1,7 @@
 function ChartDisplay({ meta, series, status }) {
+function ChartDisplay({ series, status, selectionLabel }) {
+  const readableLabel = selectionLabel || series?.name?.split("-").join(" ");
+
   if (status.state === "loading") {
     return (
       <div className="chart-display">
@@ -31,6 +34,7 @@ function ChartDisplay({ meta, series, status }) {
     <div className="chart-display">
       <div className="chart-header">
         <h3>{displayName.split("-").join(" ")}</h3>
+        <h3>{readableLabel}</h3>
         <p>
           Latest observation ({latestPoint.timestamp}):
           <strong>
@@ -44,6 +48,7 @@ function ChartDisplay({ meta, series, status }) {
           <tr>
             <th scope="col">Month</th>
             <th scope="col">Ratio ({displayName})</th>
+            <th scope="col">Ratio ({readableLabel})</th>
           </tr>
         </thead>
         <tbody>
@@ -56,9 +61,8 @@ function ChartDisplay({ meta, series, status }) {
         </tbody>
       </table>
       <p className="chart-footnote">
-        Prototype data uses 2023 month-end closes for the S&amp;P 500 index and
-        gold spot price. Interactive charting will replace this table in future
-        iterations.
+        Prototype data uses month-end closes for the selected basket and will be
+        replaced by interactive charting in future iterations.
       </p>
     </div>
   );
