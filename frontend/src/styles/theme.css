@@ -8,7 +8,25 @@
   --surface-muted: rgba(255, 255, 255, 0.03);
   --surface-active: rgba(255, 111, 60, 0.12);
   --focus-ring: rgba(255, 111, 60, 0.45);
+  color-scheme: dark light;
+  --bg: #0b0b10;
+  --text: #f9fafb;
+  --dim: #9ca3af;
+  --border: #27272a;
+  --card-bg: #18181b;
+  --accent: #f97316;
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f9fafb;
+    --text: #111827;
+    --dim: #4b5563;
+    --border: #d1d5db;
+    --card-bg: #ffffff;
+    --accent: #ea580c;
+  }
 }
 
 body {
@@ -16,6 +34,16 @@ body {
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  color: inherit;
+  background: none;
 }
 
 .app-shell {
@@ -33,7 +61,7 @@ body {
 
 .app-header p {
   margin: 0;
-  color: var(--muted);
+  color: var(--dim);
 }
 
 .app-grid {
@@ -43,11 +71,17 @@ body {
 }
 
 .panel {
-  background: var(--panel);
+  background: var(--card-bg);
   border-radius: 16px;
   padding: 1.5rem;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+}
+
+@media (prefers-color-scheme: light) {
+  .panel {
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  }
 }
 
 .panel h2 {
@@ -82,7 +116,7 @@ body {
   margin-bottom: 0.75rem;
   background: var(--surface-muted);
   border-radius: 12px;
-  border: 1px solid transparent;
+  border: 1px solid var(--border);
   cursor: pointer;
   color: inherit;
   transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
@@ -90,6 +124,20 @@ body {
 
 .asset-selector label:hover {
   transform: translateY(-1px);
+  background: color-mix(in srgb, var(--card-bg) 88%, var(--text) 12%);
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease,
+    transform 150ms ease;
+}
+
+.asset-selector label:hover,
+.basket-selector button:hover {
+  background: color-mix(in srgb, var(--card-bg) 70%, var(--text) 30%);
+}
+
+.asset-selector label:focus-visible,
+.basket-selector button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 80%, var(--text) 20%);
+  outline-offset: 2px;
 }
 
 .asset-selector label.selected {
@@ -132,6 +180,14 @@ body {
 .ui-button--pill {
   padding-block: 0.45rem;
   padding-inline: 1.25rem;
+  background: color-mix(in srgb, var(--accent) 22%, var(--card-bg));
+  color: var(--text);
+  transform: translateY(-1px);
+}
+
+.basket-selector button {
+  width: 100%;
+  justify-content: space-between;
   font-weight: 600;
 }
 
@@ -157,45 +213,50 @@ body {
 
 .chart-header p {
   margin: 0;
-  color: var(--muted);
+  color: var(--dim);
 }
 
 .status-message {
   margin: 0;
   padding: 1rem 1.25rem;
   background: var(--surface-muted);
+  background: color-mix(in srgb, var(--card-bg) 82%, var(--bg) 18%);
   border-radius: 12px;
+  border: 1px solid var(--border);
 }
 
 .status-message.error {
-  color: #ffb4a2;
+  color: #b91c1c;
 }
 
 .ratio-table {
   width: 100%;
   border-collapse: collapse;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--card-bg);
   border-radius: 12px;
   overflow: hidden;
+  border: 1px solid var(--border);
 }
 
 .ratio-table th,
 .ratio-table td {
   padding: 0.75rem 1rem;
   text-align: left;
+  border-bottom: 1px solid var(--border);
 }
 
 .ratio-table tbody tr:nth-child(odd) {
   background: var(--surface-muted);
+  background: color-mix(in srgb, var(--card-bg) 75%, var(--bg) 25%);
 }
 
 .ratio-table tbody tr:nth-child(even) {
-  background: transparent;
+  background: var(--card-bg);
 }
 
 .chart-footnote {
   margin: 0;
-  color: var(--muted);
+  color: var(--dim);
   font-size: 0.875rem;
 }
 
