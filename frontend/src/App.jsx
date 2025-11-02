@@ -6,6 +6,13 @@ import ChartDisplay from "./components/ChartDisplay.jsx";
 
 function App() {
   const [series, setSeries] = useState(null);
+  const [selectedAssetId, setSelectedAssetId] = useState(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    return window.localStorage.getItem("selectedAssetId");
+  });
   const [status, setStatus] = useState({ state: "loading", message: "" });
 
   const apiBaseUrl = useMemo(
@@ -37,6 +44,22 @@ function App() {
     fetchSeries();
   }, [apiBaseUrl]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (selectedAssetId) {
+      window.localStorage.setItem("selectedAssetId", selectedAssetId);
+    } else {
+      window.localStorage.removeItem("selectedAssetId");
+    }
+  }, [selectedAssetId]);
+
+  const handleAssetChange = (assetId) => {
+    setSelectedAssetId(assetId);
+  };
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -46,7 +69,7 @@ function App() {
       <main className="app-grid">
         <section className="panel">
           <h2>Assets</h2>
-          <AssetSelector />
+          <AssetSelector value={selectedAssetId} onChange={handleAssetChange} />
         </section>
         <section className="panel">
           <h2>Basket</h2>
