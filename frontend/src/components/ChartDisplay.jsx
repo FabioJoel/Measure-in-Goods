@@ -1,4 +1,4 @@
-function ChartDisplay({ series, status }) {
+function ChartDisplay({ meta, series, status }) {
   if (status.state === "loading") {
     return (
       <div className="chart-display">
@@ -24,21 +24,26 @@ function ChartDisplay({ series, status }) {
   }
 
   const latestPoint = series.points[series.points.length - 1];
+  const displayName = meta?.label ?? meta?.name ?? series.name;
+  const units = meta?.denominator_units ?? meta?.units ?? "oz of gold";
 
   return (
     <div className="chart-display">
       <div className="chart-header">
-        <h3>{series.name.split("-").join(" ")}</h3>
+        <h3>{displayName.split("-").join(" ")}</h3>
         <p>
           Latest observation ({latestPoint.timestamp}):
-          <strong> {latestPoint.value.toFixed(2)} oz of gold</strong>
+          <strong>
+            {" "}
+            {latestPoint.value.toFixed(2)} {units}
+          </strong>
         </p>
       </div>
       <table className="ratio-table">
         <thead>
           <tr>
             <th scope="col">Month</th>
-            <th scope="col">Ratio (S&amp;P 500 ÷ Gold)</th>
+            <th scope="col">Ratio ({displayName})</th>
           </tr>
         </thead>
         <tbody>
