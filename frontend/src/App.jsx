@@ -1,157 +1,161 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import AssetSelector, {
-  AVAILABLE_ASSETS,
-} from "./components/AssetSelector.jsx";
-import BasketSelector, {
-  PRESET_BASKETS,
-} from "./components/BasketSelector.jsx";
-import ChartDisplay from "./components/ChartDisplay.jsx";
+import ContentSection from "./components/ContentSection.jsx";
+import HeroSection from "./components/HeroSection.jsx";
+import NavigationTabs from "./components/NavigationTabs.jsx";
+import NoteCard from "./components/NoteCard.jsx";
+import ChartDemo from "./components/ChartDemo.jsx";
 
-const REFERENCE_INDEXES = [
-  {
-    id: "sp500-gold",
-    label: "S&P 500 priced in gold",
-    endpoint: "/ratios/sp500-gold",
-  },
+const ROUTES = [
+  { id: "home", label: "Home" },
+  { id: "reading", label: "Reading" },
+  { id: "writings", label: "Writings" },
+  { id: "about", label: "About" },
 ];
 
 function App() {
-  const [selectedAsset, setSelectedAsset] = useState(
-    () => AVAILABLE_ASSETS[0]?.id ?? null
-  );
-  const [activeBasket, setActiveBasket] = useState(
-    () => PRESET_BASKETS[0]?.id ?? null
-  );
-  const [selectedIndex, setSelectedIndex] = useState(REFERENCE_INDEXES[0].id);
-  const [series, setSeries] = useState(null);
-  const [status, setStatus] = useState({
-    state: "loading",
-    message: "Loading data…",
-  });
+  const [activeRoute, setActiveRoute] = useState("home");
+  const [theme, setTheme] = useState("mint");
+
+  const sectionRefs = {
+    home: useRef(null),
+    reading: useRef(null),
+    writings: useRef(null),
+    about: useRef(null),
+  };
 
   const apiBaseUrl = useMemo(
     () => import.meta.env.VITE_API_URL ?? "http://localhost:8000",
     []
   );
 
-  const activeIndexOption = useMemo(
-    () =>
-      REFERENCE_INDEXES.find((option) => option.id === selectedIndex) ??
-      REFERENCE_INDEXES[0],
-    [selectedIndex]
-  );
-
-  const activeAssetOption = useMemo(
-    () => AVAILABLE_ASSETS.find((option) => option.id === selectedAsset),
-    [selectedAsset]
-  );
-
   useEffect(() => {
-    const option = REFERENCE_INDEXES.find((entry) => entry.id === selectedIndex);
-
-    if (!option) {
-      setSeries(null);
-      setStatus({ state: "error", message: "Unknown reference index" });
-      return undefined;
-    }
-
-    let cancelled = false;
-
-    async function fetchSeries() {
-      setStatus({
-        state: "loading",
-        message: `Loading ${option.label}…`,
-      });
-
-      try {
-        const response = await fetch(`${apiBaseUrl}${option.endpoint}`);
-
-        if (!response.ok) {
-          throw new Error(`Request failed with status ${response.status}`);
-        }
-
-        const payload = await response.json();
-
-        if (cancelled) {
-          return;
-        }
-
-        setSeries(payload);
-        setStatus({ state: "loaded", message: "" });
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        setSeries(null);
-        setStatus({
-          state: "error",
-          message:
-            error instanceof Error ? error.message : "Unable to load data",
-        });
-      }
-    }
-
-    fetchSeries();
-
+    const body = document.body;
+    body.classList.remove("theme-mint", "theme-dark");
+    body.classList.add(`theme-${theme}`);
     return () => {
-      cancelled = true;
+      body.classList.remove(`theme-${theme}`);
     };
-  }, [apiBaseUrl, selectedIndex]);
+  }, [theme]);
+
+  const handleRouteChange = (routeId) => {
+    setActiveRoute(routeId);
+    const target = sectionRefs[routeId]?.current;
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const handleExplore = () => {
+    handleRouteChange("home");
+    const chartAnchor = document.getElementById("chart-demo");
+    if (chartAnchor) {
+      chartAnchor.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const toggleTheme = () => {
+    setTheme((current) => (current === "mint" ? "dark" : "mint"));
+  };
 
   return (
-    <div className="app-shell">
-      <header className="app-header">
-        <h1>Measure in Goods</h1>
-        <p>Prototype interface for constructing purchasing power baskets.</p>
-      </header>
-      <main className="app-grid">
-        <section className="panel">
-          <h2>Assets</h2>
-          <AssetSelector
-            selectedAsset={selectedAsset}
-            onSelectionChange={setSelectedAsset}
-          />
-          <p className="panel-footnote">
-            {selectedAsset
-              ? `Tracking asset: ${
-                  activeAssetOption?.label ?? selectedAsset
-                }`
-              : "Select an asset to include in your custom basket."}
+    <div className="site-root">
+      <NavigationTabs
+        routes={ROUTES}
+        activeRoute={activeRoute}
+        onRouteChange={handleRouteChange}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
+      <main className="site-layout">
+        <HeroSection onExplore={handleExplore} />
+        <NoteCard title="What is Measure in Goods?" eyebrow="Field notes">
+          <p>
+            An ongoing experiment in reframing macro conversations through
+            tactile metaphors. Rather than defaulting to CPI releases, we model
+            baskets of goods that feel real: rent, energy, staple foods, and the
+            time required to earn them.
           </p>
-        </section>
-        <section className="panel">
-          <h2>Basket</h2>
-          <BasketSelector
-            activeBasket={activeBasket}
-            onSelect={setActiveBasket}
-          />
-          <p className="panel-footnote">
-            {activeBasket
-              ? `Active basket template: ${activeBasket}`
-              : "Choose a basket template to explore weighting approaches."}
+          <p>
+            Use the tabs to browse curated reading, project writings, and a
+            prototype land-tax chart that reprices popular indexes in tangible
+            units.
           </p>
-        </section>
-        <section className="panel full-width">
-          <h2>Reference index</h2>
-          <ChartDisplay
-            series={series}
-            status={status}
-            meta={{ name: activeIndexOption?.label ?? series?.name ?? "" }}
-          />
-          <div className="panel-subsection">
-            <h3>Available ratios</h3>
-            <BasketSelector
-              options={REFERENCE_INDEXES.map(({ id, label }) => ({
-                id,
-                label,
-              }))}
-              activeBasket={selectedIndex}
-              onSelect={setSelectedIndex}
-            />
-          </div>
-        </section>
+        </NoteCard>
+        <div className="site-content">
+          <ContentSection
+            id="home"
+            ref={sectionRefs.home}
+            title="Home"
+            description="Start with the latest experiment: repricing markets in goods."
+          >
+            <div id="chart-demo">
+              <ChartDemo apiBaseUrl={apiBaseUrl} />
+            </div>
+          </ContentSection>
+          <ContentSection
+            id="reading"
+            ref={sectionRefs.reading}
+            title="Reading"
+            description="Research threads, data-heavy policy proposals, and historical context."
+          >
+            <ul className="content-list">
+              <li>
+                <strong>Land value capture:</strong> Henry George, modern tax
+                experiments, and how they inform basket design.
+              </li>
+              <li>
+                <strong>Household inflation diaries:</strong> Qualitative
+                studies on how families perceive price changes.
+              </li>
+              <li>
+                <strong>Commodity-backed accounting:</strong> Protocols that
+                settle obligations in mixed baskets rather than fiat.
+              </li>
+            </ul>
+          </ContentSection>
+          <ContentSection
+            id="writings"
+            ref={sectionRefs.writings}
+            title="Writings"
+            description="Working drafts and essays from the lab."
+          >
+            <ul className="content-list">
+              <li>
+                <strong>Measuring in loaves:</strong> Rethinking wage charts
+                with bakery analogies.
+              </li>
+              <li>
+                <strong>Energy rents:</strong> A note on pairing kWh with rent
+                indexes to track energy burdens.
+              </li>
+              <li>
+                <strong>Basket prototyping:</strong> Behind the scenes on how
+                we assemble weightings and select source data.
+              </li>
+            </ul>
+          </ContentSection>
+          <ContentSection
+            id="about"
+            ref={sectionRefs.about}
+            title="About"
+            description="The project, the collaborators, and where we are headed next."
+          >
+            <div className="about-grid">
+              <p>
+                Measure in Goods is a small collective of researchers exploring
+                how people actually experience markets. We build prototypes that
+                turn economic indicators into tangible comparisons and invite
+                feedback from communities most affected by price swings.
+              </p>
+              <p>
+                Interested in contributing datasets or collaborating on a
+                feature? Reach out and let us know what you would like to see in
+                the next iteration of the lab.
+              </p>
+            </div>
+          </ContentSection>
+        </div>
       </main>
     </div>
   );
