@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
-from typing import List, Sequence
+from typing import Sequence
 
-from .models import AssetSelection, BasketComputationRequest, BasketComposition, BasketSeriesPoint
+from .models import BasketComputationRequest, BasketComposition, BasketSeriesPoint
 from data.fred import TimeSeriesPoint
 from data.sample_series import (
     get_gold_series,
@@ -20,11 +19,9 @@ class PricingEngine:
     def compute(self, request: BasketComputationRequest) -> BasketComposition:
         """Placeholder computation that simulates a time series output."""
 
-        # The implementation will eventually merge normalized time series retrieved
-        # from the data layer. For now we return a synthetic series to demonstrate
-        # the shape of the response structure.
-        points = self._generate_placeholder_series(request.assets)
-        return BasketComposition(name="synthetic-basket", points=points)
+        raise NotImplementedError(
+            "Basket computation is not implemented. Use specific ratio helpers instead."
+        )
 
     def compute_sp500_in_gold(self) -> BasketComposition:
         """Return the S&P 500 priced in ounces of gold using sample data."""
@@ -64,14 +61,14 @@ class PricingEngine:
         converted.sort(key=lambda entry: entry.timestamp)
         return BasketComposition(name="sp500-in-chf", points=converted)
 
-    def _generate_placeholder_series(self, assets: List[AssetSelection]) -> list[BasketSeriesPoint]:
-        """Create a short synthetic series to unblock frontend development."""
+    def compute_gold_in_usd(self) -> BasketComposition:
+        """Return gold priced in USD using sample data."""
 
-        base_date = date.today() - timedelta(days=30)
-        return [
-            BasketSeriesPoint(timestamp=base_date + timedelta(days=i), value=100 + i)
-            for i, _asset in enumerate(range(5))
+        points = [
+            BasketSeriesPoint(timestamp=point.timestamp, value=point.value)
+            for point in get_gold_series()
         ]
+        return BasketComposition(name="gold-in-usd", points=points)
 
     def _compute_ratio(
         self,

@@ -3,6 +3,7 @@ import SearchSelect from "./SearchSelect.jsx";
 export const AVAILABLE_ASSETS = [
   { id: "SPX", label: "S&P 500 Index (SPX)" },
   { id: "SPY", label: "SPDR S&P 500 ETF (SPY)" },
+  { id: "XAUUSD", label: "Gold spot price (XAUUSD)" },
   { id: "VT", label: "Vanguard Total World Stock ETF (VT)" },
   { id: "CSUSHPISA", label: "Case-Shiller US Home Price Index" },
   { id: "FHFA_HPI_USA", label: "FHFA US House Price Index" },

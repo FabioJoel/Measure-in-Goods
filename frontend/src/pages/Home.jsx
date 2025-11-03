@@ -24,6 +24,7 @@ const SERIES_ENDPOINTS = {
   "SPY::usd": "/ratios/sp500-usd",
   "SPX::chf": "/ratios/sp500-chf",
   "SPY::chf": "/ratios/sp500-chf",
+  "XAUUSD::usd": "/ratios/gold-usd",
 };
 
 const BASKET_RESOURCES = [

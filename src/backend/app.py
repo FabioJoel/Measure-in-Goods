@@ -60,3 +60,10 @@ def sp500_in_chf(engine: pricing.PricingEngine = Depends(get_pricing_engine)) ->
     """Return the S&P 500 priced in Swiss francs."""
 
     return engine.compute_sp500_in_chf()
+
+
+@app.get("/ratios/gold-usd", response_model=BasketComposition)
+def gold_in_usd(engine: pricing.PricingEngine = Depends(get_pricing_engine)) -> BasketComposition:
+    """Return gold priced in USD."""
+
+    return engine.compute_gold_in_usd()

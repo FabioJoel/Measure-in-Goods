@@ -82,6 +82,13 @@ once the workflow (or the local scripts) run.
 
 A side project for valuing everything in terms of real-world goods.
 
+#### Deployed backend
+
+- The FastAPI service runs on Render at `https://measure-in-goods.onrender.com`.
+- Render start command: `uvicorn src.backend.app:app --host 0.0.0.0 --port $PORT`.
+- Data snapshots (`frontend/public/data/*.json`) are committed to the repo so the
+  Render deploy always serves the full historical series.
+
 ## Abstract
 Measure-in-Goods is an experiment in describing value using baskets of real goods—oil barrels, timber, staple foods, rent, electricity—instead of sticking to nominal currency. The mission is to see whether market benchmarks like SPY look different when priced in tangible resources and to give people a concrete way to compare wages, prices, and policies across regions.
 
