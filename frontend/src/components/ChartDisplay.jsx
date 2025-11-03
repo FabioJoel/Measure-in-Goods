@@ -1,21 +1,223 @@
-function formatDate(isoDate) {
-  if (!isoDate) {
-    return "";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+const RANGE_OPTIONS = [
+  { id: "3m", label: "3M", days: 90 },
+  { id: "1y", label: "1Y", days: 365 },
+  { id: "5y", label: "5Y", days: 1825 },
+  { id: "10y", label: "10Y", days: 3650 },
+  { id: "max", label: "MAX", days: Infinity },
+];
+
+const CHART_MARGIN = { top: 28, right: 32, bottom: 52, left: 72 };
+
+const LONG_DATE_FORMATTER = new Intl.DateTimeFormat("en", {
+  year: "numeric",
+  month: "short",
+  day: "2-digit",
+});
+
+const SHORT_DATE_FORMATTER = new Intl.DateTimeFormat("en", {
+  year: "numeric",
+  month: "short",
+});
+
+function formatValue(value, { compact = false } = {}) {
+  if (!Number.isFinite(value)) {
+    return "—";
   }
 
-  const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) {
-    return isoDate;
+  if (compact) {
+    return new Intl.NumberFormat("en-US", {
+      notation: "compact",
+      maximumFractionDigits: 1,
+    }).format(value);
   }
 
-  return new Intl.DateTimeFormat("en", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-  }).format(date);
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: value >= 1000 ? 0 : 2,
+  }).format(value);
 }
 
-function ChartDisplay({ meta, series, status }) {
+function normalizeSeries(points = []) {
+  return points
+    .map((point) => {
+      const iso = point.timestamp ?? point.date;
+      const numericValue = Number.parseFloat(point.value);
+      const parsedDate = iso ? new Date(iso) : null;
+
+      if (!iso || !Number.isFinite(numericValue) || !parsedDate || Number.isNaN(parsedDate.getTime())) {
+        return null;
+      }
+
+      return {
+        iso,
+        date: parsedDate,
+        value: numericValue,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.date - b.date);
+}
+
+function filterByRange(points, rangeId) {
+  if (!Array.isArray(points) || points.length === 0) {
+    return [];
+  }
+
+  if (rangeId === "max") {
+    return points;
+  }
+
+  const option = RANGE_OPTIONS.find((entry) => entry.id === rangeId);
+  if (!option || !Number.isFinite(option.days)) {
+    return points;
+  }
+
+  const lastDate = points[points.length - 1].date;
+  const cutoff = new Date(lastDate);
+  cutoff.setDate(cutoff.getDate() - option.days);
+
+  return points.filter((point) => point.date >= cutoff);
+}
+
+function buildChartGeometry(points, size) {
+  if (!Array.isArray(points) || points.length < 2) {
+    return {
+      chartPoints: [],
+      linePath: "",
+      areaPath: "",
+      yTicks: [],
+      xTicks: [],
+      baselineY: 0,
+    };
+  }
+
+  const width = Math.max(size.width, CHART_MARGIN.left + CHART_MARGIN.right + 60);
+  const height = size.height;
+  const innerWidth = width - CHART_MARGIN.left - CHART_MARGIN.right;
+  const innerHeight = height - CHART_MARGIN.top - CHART_MARGIN.bottom;
+
+  const minDate = points[0].date.getTime();
+  const maxDate = points[points.length - 1].date.getTime();
+  const dateRange = maxDate - minDate || 1;
+
+  const values = points.map((entry) => entry.value);
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+  const padding = (maxValue - minValue || maxValue || 1) * 0.08;
+  const paddedMin = minValue - padding;
+  const paddedMax = maxValue + padding;
+  const valueRange = paddedMax - paddedMin || 1;
+
+  const chartPoints = points.map((entry) => {
+    const x =
+      CHART_MARGIN.left +
+      ((entry.date.getTime() - minDate) / dateRange) * innerWidth;
+    const y =
+      CHART_MARGIN.top +
+      (1 - (entry.value - paddedMin) / valueRange) * innerHeight;
+
+    return {
+      ...entry,
+      x,
+      y,
+    };
+  });
+
+  const baselineY = height - CHART_MARGIN.bottom;
+  const linePath = chartPoints
+    .map((point, index) => `${index === 0 ? "M" : "L"}${point.x} ${point.y}`)
+    .join(" ");
+
+  const areaPath =
+    `M ${chartPoints[0].x} ${baselineY} ` +
+    chartPoints.map((point) => `L ${point.x} ${point.y}`).join(" ") +
+    ` L ${chartPoints[chartPoints.length - 1].x} ${baselineY} Z`;
+
+  const yTickCount = 5;
+  const yTicks = Array.from({ length: yTickCount }, (_, index) => {
+    const ratio = index / (yTickCount - 1);
+    const value = paddedMax - ratio * valueRange;
+    const y = CHART_MARGIN.top + ratio * innerHeight;
+    return { value, y };
+  });
+
+  const xTicks = [
+    chartPoints[0],
+    chartPoints[Math.floor(chartPoints.length / 2)],
+    chartPoints[chartPoints.length - 1],
+  ].reduce((acc, point) => {
+    if (!acc.find((tick) => tick.date.getTime() === point.date.getTime())) {
+      acc.push(point);
+    }
+    return acc;
+  }, []);
+
+  return {
+    chartPoints,
+    linePath,
+    areaPath,
+    yTicks,
+    xTicks,
+    baselineY,
+    width,
+    height,
+  };
+}
+
+function findNearestIndex(points, x) {
+  if (!Array.isArray(points) || points.length === 0) {
+    return null;
+  }
+
+  let bestIndex = 0;
+  let bestDistance = Infinity;
+
+  points.forEach((point, index) => {
+    const distance = Math.abs(point.x - x);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = index;
+    }
+  });
+
+  return bestIndex;
+}
+
+export default function ChartDisplay({ meta, series, status }) {
+  const chartRef = useRef(null);
+  const [size, setSize] = useState({ width: 920, height: 360 });
+  const [rangeId, setRangeId] = useState("5y");
+  const [hoverIndex, setHoverIndex] = useState(null);
+
+  useEffect(() => {
+    if (!chartRef.current) {
+      return;
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) {
+        return;
+      }
+
+      const nextWidth = Math.max(entry.contentRect.width, 320);
+      const nextHeight = Math.max(
+        260,
+        Math.min(440, nextWidth * 0.45)
+      );
+
+      setSize({ width: nextWidth, height: nextHeight });
+    });
+
+    observer.observe(chartRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    setHoverIndex(null);
+  }, [series, rangeId]);
+
   if (status.state === "loading") {
     return (
       <div className="chart-display">
@@ -57,9 +259,12 @@ function ChartDisplay({ meta, series, status }) {
     );
   }
 
-  const points = series?.points ?? [];
+  const normalizedPoints = useMemo(
+    () => normalizeSeries(series?.points),
+    [series?.points]
+  );
 
-  if (points.length === 0) {
+  if (normalizedPoints.length === 0) {
     return (
       <div className="chart-display">
         <p className="status-message">No data available yet.</p>
@@ -67,43 +272,270 @@ function ChartDisplay({ meta, series, status }) {
     );
   }
 
-  const latestPoint = points[points.length - 1];
-  const displayName = meta?.name ?? series?.name ?? "Basket";
+  const filteredPoints = useMemo(
+    () => filterByRange(normalizedPoints, rangeId),
+    [normalizedPoints, rangeId]
+  );
+
+  const geometry = useMemo(
+    () => buildChartGeometry(filteredPoints, size),
+    [filteredPoints, size]
+  );
+
+  if (geometry.chartPoints.length < 2) {
+    return (
+      <div className="chart-display">
+        <div className="chart-header">
+          <h3>{meta?.name ?? series?.name ?? "Basket"}</h3>
+          <p>Need more observations before rendering a chart.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const rangeLabel =
+    RANGE_OPTIONS.find((option) => option.id === rangeId)?.label ?? "MAX";
+  const pointForDisplay =
+    hoverIndex != null
+      ? geometry.chartPoints[hoverIndex]
+      : geometry.chartPoints[geometry.chartPoints.length - 1];
+  const startPoint = geometry.chartPoints[0];
+  const absoluteChange = pointForDisplay.value - startPoint.value;
+  const percentChange =
+    startPoint.value !== 0 ? (absoluteChange / startPoint.value) * 100 : 0;
+  const changeIsPositive = absoluteChange >= 0;
+
+  const handlePointerMove = (event) => {
+    if (!geometry.chartPoints.length) {
+      return;
+    }
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - bounds.left;
+    const index = findNearestIndex(geometry.chartPoints, x);
+    setHoverIndex(index);
+  };
+
+  const handlePointerLeave = () => {
+    setHoverIndex(null);
+  };
+
+  const tooltipPoint =
+    hoverIndex != null ? geometry.chartPoints[hoverIndex] : null;
+
+  const tooltipLeft = tooltipPoint
+    ? Math.min(
+        Math.max(tooltipPoint.x, CHART_MARGIN.left + 12),
+        geometry.width - 140
+      )
+    : 0;
 
   return (
     <div className="chart-display">
       <div className="chart-header">
-        <h3>{displayName}</h3>
-        <p>
-          Latest observation ({formatDate(latestPoint.timestamp)}):
-          <strong>
-            {" "}
-            {latestPoint.value.toFixed(2)}
-          </strong>
-        </p>
-      </div>
-      <table className="ratio-table">
-        <thead>
-          <tr>
-            <th scope="col">Date</th>
-            <th scope="col">Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          {points.map((point) => (
-            <tr key={point.timestamp}>
-              <td>{formatDate(point.timestamp)}</td>
-              <td>{point.value.toFixed(2)}</td>
-            </tr>
+        <div className="chart-header__meta">
+          <h3>{meta?.name ?? series?.name ?? "Basket"}</h3>
+          <p>
+            {rangeLabel} range · {filteredPoints.length} observations
+          </p>
+        </div>
+        <div
+          className="range-toggle"
+          role="group"
+          aria-label="Select time range"
+        >
+          {RANGE_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={`range-toggle__button${
+                rangeId === option.id ? " is-active" : ""
+              }`}
+              onClick={() => setRangeId(option.id)}
+            >
+              {option.label}
+            </button>
           ))}
-        </tbody>
-      </table>
+        </div>
+      </div>
+
+      <div className="chart-summary">
+        <div className="chart-summary__group">
+          <span className="chart-summary__label">Price</span>
+          <strong className="chart-summary__value">
+            {formatValue(pointForDisplay.value)}
+          </strong>
+          <span className="chart-summary__date">
+            {LONG_DATE_FORMATTER.format(pointForDisplay.date)}
+          </span>
+        </div>
+        <div
+          className={`chart-summary__group chart-summary__group--change${
+            changeIsPositive ? " is-positive" : " is-negative"
+          }`}
+        >
+          <span className="chart-summary__label">Change ({rangeLabel})</span>
+          <strong className="chart-summary__value">
+            {changeIsPositive ? "+" : ""}
+            {formatValue(absoluteChange)}
+          </strong>
+          <span className="chart-summary__date">
+            {changeIsPositive ? "+" : ""}
+            {percentChange.toFixed(2)}%
+          </span>
+        </div>
+      </div>
+
+      <div className="ratio-chart" ref={chartRef}>
+        <svg
+          width={geometry.width}
+          height={geometry.height}
+          viewBox={`0 0 ${geometry.width} ${geometry.height}`}
+          role="img"
+          aria-label={`${meta?.name ?? series?.name ?? "basket"} time series`}
+        >
+          <defs>
+            <linearGradient id="ratioLineGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--accent-strong)" />
+              <stop offset="100%" stopColor="var(--accent)" />
+            </linearGradient>
+            <linearGradient id="ratioAreaGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop
+                offset="0%"
+                stopColor="var(--accent-strong)"
+                stopOpacity="0.26"
+              />
+              <stop
+                offset="100%"
+                stopColor="var(--accent)"
+                stopOpacity="0.05"
+              />
+            </linearGradient>
+          </defs>
+
+          <g className="ratio-chart__grid">
+            {geometry.yTicks.map((tick, index) => (
+              <g key={`y-${index}`}>
+                <line
+                  x1={CHART_MARGIN.left}
+                  x2={geometry.width - CHART_MARGIN.right}
+                  y1={tick.y}
+                  y2={tick.y}
+                  stroke="rgba(255, 255, 255, 0.08)"
+                  strokeWidth="1"
+                />
+                <text
+                  x={CHART_MARGIN.left - 14}
+                  y={tick.y + 4}
+                  textAnchor="end"
+                  className="ratio-chart__tick"
+                >
+                  {formatValue(tick.value, { compact: true })}
+                </text>
+              </g>
+            ))}
+          </g>
+
+          <g className="ratio-chart__axis">
+            <line
+              x1={CHART_MARGIN.left}
+              x2={geometry.width - CHART_MARGIN.right}
+              y1={geometry.baselineY}
+              y2={geometry.baselineY}
+              stroke="rgba(255, 255, 255, 0.12)"
+              strokeWidth="1"
+            />
+            {geometry.xTicks.map((tick, index) => (
+              <text
+                key={`x-${index}`}
+                x={tick.x}
+                y={geometry.height - 18}
+                textAnchor="middle"
+                className="ratio-chart__tick"
+              >
+                {SHORT_DATE_FORMATTER.format(tick.date)}
+              </text>
+            ))}
+          </g>
+
+          <path
+            d={geometry.areaPath}
+            fill="url(#ratioAreaGradient)"
+            stroke="none"
+          />
+          <path
+            d={geometry.linePath}
+            fill="none"
+            stroke="url(#ratioLineGradient)"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          {hoverIndex != null && tooltipPoint ? (
+            <>
+              <line
+                x1={tooltipPoint.x}
+                x2={tooltipPoint.x}
+                y1={CHART_MARGIN.top}
+                y2={geometry.baselineY}
+                className="ratio-chart__crosshair"
+              />
+              <circle
+                cx={tooltipPoint.x}
+                cy={tooltipPoint.y}
+                r="5"
+                fill="var(--accent-strong)"
+                stroke="rgba(0, 0, 0, 0.65)"
+                strokeWidth="1.2"
+              />
+            </>
+          ) : (
+            <circle
+              cx={geometry.chartPoints[geometry.chartPoints.length - 1].x}
+              cy={geometry.chartPoints[geometry.chartPoints.length - 1].y}
+              r="4.4"
+              fill="var(--accent-strong)"
+              stroke="rgba(0, 0, 0, 0.6)"
+              strokeWidth="1"
+            />
+          )}
+
+          <rect
+            className="ratio-chart__hitbox"
+            x={CHART_MARGIN.left}
+            y={CHART_MARGIN.top}
+            width={geometry.width - CHART_MARGIN.left - CHART_MARGIN.right}
+            height={geometry.height - CHART_MARGIN.top - CHART_MARGIN.bottom}
+            fill="transparent"
+            onPointerMove={handlePointerMove}
+            onPointerEnter={handlePointerMove}
+            onPointerLeave={handlePointerLeave}
+          />
+        </svg>
+
+        {tooltipPoint ? (
+          <div
+            className="ratio-chart__tooltip"
+            style={{
+              left: `${tooltipLeft}px`,
+              top: `${CHART_MARGIN.top + 12}px`,
+            }}
+          >
+            <span className="ratio-chart__tooltip-date">
+              {LONG_DATE_FORMATTER.format(tooltipPoint.date)}
+            </span>
+            <strong className="ratio-chart__tooltip-value">
+              {formatValue(tooltipPoint.value)}
+            </strong>
+          </div>
+        ) : null}
+      </div>
+
       <p className="chart-footnote">
-        Prototype data uses month-end closes for the selected basket and will be
-        replaced by interactive charting in future iterations.
+        Hover or tap to inspect individual observations. More overlays, basket
+        comparisons, and export tools are on the roadmap.
       </p>
     </div>
   );
 }
-
-export default ChartDisplay;

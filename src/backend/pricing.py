@@ -7,7 +7,11 @@ from typing import List, Sequence
 
 from .models import AssetSelection, BasketComputationRequest, BasketComposition, BasketSeriesPoint
 from data.fred import TimeSeriesPoint
-from data.sample_series import get_gold_series, get_sp500_series
+from data.sample_series import (
+    get_gold_series,
+    get_sp500_series,
+    get_usd_chf_series,
+)
 
 
 class PricingEngine:
@@ -39,6 +43,26 @@ class PricingEngine:
             for point in get_sp500_series()
         ]
         return BasketComposition(name="sp500-in-usd", points=points)
+
+    def compute_sp500_in_chf(self) -> BasketComposition:
+        """Return the S&P 500 priced in Swiss francs using sample data."""
+
+        fx_lookup = {point.timestamp: point.value for point in get_usd_chf_series()}
+        converted: list[BasketSeriesPoint] = []
+
+        for point in get_sp500_series():
+            rate = fx_lookup.get(point.timestamp)
+            if rate is None:
+                continue
+            converted.append(
+                BasketSeriesPoint(
+                    timestamp=point.timestamp,
+                    value=point.value * rate,
+                )
+            )
+
+        converted.sort(key=lambda entry: entry.timestamp)
+        return BasketComposition(name="sp500-in-chf", points=converted)
 
     def _generate_placeholder_series(self, assets: List[AssetSelection]) -> list[BasketSeriesPoint]:
         """Create a short synthetic series to unblock frontend development."""

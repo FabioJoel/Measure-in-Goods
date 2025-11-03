@@ -57,3 +57,24 @@ def get_gold_series() -> list[TimeSeriesPoint]:
     ]
 
     return _series_from_rows(rows)
+
+
+def get_usd_chf_series() -> list[TimeSeriesPoint]:
+    """Return 2023 month-end USD/CHF FX rates (CHF per USD)."""
+
+    rows = [
+        ("2023-01-31", 0.922),
+        ("2023-02-28", 0.938),
+        ("2023-03-31", 0.915),
+        ("2023-04-28", 0.894),
+        ("2023-05-31", 0.912),
+        ("2023-06-30", 0.898),
+        ("2023-07-31", 0.876),
+        ("2023-08-31", 0.883),
+        ("2023-09-29", 0.912),
+        ("2023-10-31", 0.902),
+        ("2023-11-30", 0.904),
+        ("2023-12-29", 0.866),
+    ]
+
+    return _series_from_rows(rows)

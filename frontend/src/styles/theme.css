@@ -271,45 +271,169 @@ a {
   gap: 20px;
 }
 
-.chart-header h3 {
+.chart-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.chart-header__meta h3 {
   margin: 0;
-  font-size: 20px;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.chart-header__meta p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ratio-chart {
+  position: relative;
+  width: 100%;
+  height: clamp(260px, 52vw, 380px);
+  border-radius: 18px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+.ratio-chart svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.ratio-chart__tick {
+  font-size: 11px;
+  fill: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.ratio-chart__crosshair {
+  stroke: rgba(255, 255, 255, 0.25);
+  stroke-dasharray: 4 3;
+  stroke-width: 1.2;
+}
+
+.ratio-chart__hitbox {
+  cursor: crosshair;
+}
+
+.ratio-chart__tooltip {
+  position: absolute;
+  top: 0;
+  transform: translate(-50%, 0);
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(12px);
+  color: var(--text);
+  min-width: 148px;
+  pointer-events: none;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.ratio-chart__tooltip-date {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ratio-chart__tooltip-value {
+  display: block;
+  margin-top: 4px;
+  font-size: 18px;
   letter-spacing: -0.01em;
 }
 
-.chart-header p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 14px;
+
+.chart-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: flex-end;
 }
 
-.ratio-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: rgba(0, 0, 0, 0.15);
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+.chart-summary__group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  min-width: 160px;
 }
 
-.ratio-table th,
-.ratio-table td {
-  padding: 10px 14px;
-  text-align: left;
-  font-size: 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+.chart-summary__group--change {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(48, 213, 176, 0.08);
 }
 
-.ratio-table th {
-  font-weight: 600;
+.chart-summary__group--change.is-positive {
+  background: rgba(48, 213, 176, 0.12);
+}
+
+.chart-summary__group--change.is-negative {
+  background: rgba(239, 83, 80, 0.08);
+}
+
+.chart-summary__label {
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.chart-summary__value {
+  font-size: clamp(24px, 4vw, 32px);
+  letter-spacing: -0.02em;
+}
+
+.chart-summary__date {
   font-size: 12px;
   color: var(--muted);
 }
 
-.ratio-table tbody tr:last-child td {
-  border-bottom: none;
+.range-toggle {
+  display: inline-flex;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.range-toggle__button {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: transparent;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.range-toggle__button:hover,
+.range-toggle__button:focus-visible {
+  color: var(--text);
+}
+
+.range-toggle__button.is-active {
+  background: var(--accent);
+  color: #04120f;
+  font-weight: 600;
 }
 
 .chart-footnote {

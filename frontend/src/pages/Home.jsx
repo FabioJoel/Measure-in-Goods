@@ -10,6 +10,7 @@ import SearchSelect from "../components/SearchSelect.jsx";
 const PRICING_UNITS = [
   { id: "gold", label: "Gold" },
   { id: "usd", label: "USD" },
+  { id: "chf", label: "Swiss franc (CHF)" },
   { id: "silver", label: "Silver" },
   { id: "housing", label: "Housing basket" },
   { id: "energy", label: "Energy basket" },
@@ -21,6 +22,8 @@ const SERIES_ENDPOINTS = {
   "SPY::gold": "/ratios/sp500-gold",
   "SPX::usd": "/ratios/sp500-usd",
   "SPY::usd": "/ratios/sp500-usd",
+  "SPX::chf": "/ratios/sp500-chf",
+  "SPY::chf": "/ratios/sp500-chf",
 };
 
 const BASKET_RESOURCES = [
