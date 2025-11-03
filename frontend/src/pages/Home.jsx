@@ -27,11 +27,65 @@ const SERIES_ENDPOINTS = {
   "GOLD::usd": "/ratios/gold-usd",
 };
 
+const TROY_OUNCES_PER_KILOGRAM = 32.1507466;
+const GRAMS_PER_TROY_OUNCE = 31.1034768;
+
 const GOLD_VARIANTS = [
   { id: "ounce", label: "Spot price (USD/oz troy)" },
   { id: "kilogram", label: "Price per kilogram (USD/kg)" },
   { id: "gram", label: "Price per gram (USD/g)" },
 ];
+
+const UNIT_VARIANTS = {
+  gold: {
+    default: "ounce",
+    options: [
+      {
+        id: "ounce",
+        label: "Troy ounce",
+        transform: (value) => value,
+      },
+      {
+        id: "kilogram",
+        label: "Kilogram",
+        transform: (value) => value / TROY_OUNCES_PER_KILOGRAM,
+      },
+      {
+        id: "gram",
+        label: "Gram",
+        transform: (value) => value * GRAMS_PER_TROY_OUNCE,
+      },
+    ],
+  },
+};
+
+function applyUnitVariantToSeries(series, unitId, variantId) {
+  if (!series) {
+    return series;
+  }
+
+  const config = UNIT_VARIANTS[unitId];
+  if (!config) {
+    return series;
+  }
+
+  const targetId = variantId ?? config.default;
+  const variant =
+    config.options.find((option) => option.id === targetId) ??
+    config.options.find((option) => option.id === config.default);
+
+  if (!variant?.transform || !Array.isArray(series.points)) {
+    return variant ? { ...series } : series;
+  }
+
+  return {
+    ...series,
+    points: series.points.map((point) => ({
+      ...point,
+      value: variant.transform(point.value),
+    })),
+  };
+}
 
 const BASKET_RESOURCES = [
   { id: "gold", label: "Gold bullion", category: "Metals" },
@@ -50,10 +104,14 @@ export default function HomePage() {
   );
   const [selectedUnit, setSelectedUnit] = useState(PRICING_UNITS[0].id);
   const [customBasketItems, setCustomBasketItems] = useState([]);
+  const [rawSeries, setRawSeries] = useState(null);
   const [series, setSeries] = useState(null);
   const [status, setStatus] = useState({ state: "idle", message: "" });
   const [selectedGoldVariant, setSelectedGoldVariant] = useState(
     GOLD_VARIANTS[0].id
+  );
+  const [selectedUnitVariant, setSelectedUnitVariant] = useState(
+    UNIT_VARIANTS[PRICING_UNITS[0].id]?.default ?? null
   );
 
   const apiBaseUrl = useMemo(
@@ -76,8 +134,38 @@ export default function HomePage() {
     [selectedGoldVariant]
   );
 
+  const activeUnitVariant = useMemo(() => {
+    const config = UNIT_VARIANTS[selectedUnit];
+    if (!config) {
+      return null;
+    }
+    const targetId = selectedUnitVariant ?? config.default;
+    return (
+      config.options.find((option) => option.id === targetId) ??
+      config.options.find((option) => option.id === config.default) ??
+      null
+    );
+  }, [selectedUnit, selectedUnitVariant]);
+
+  useEffect(() => {
+    const config = UNIT_VARIANTS[selectedUnit];
+    if (!config) {
+      setSelectedUnitVariant(null);
+      return;
+    }
+    setSelectedUnitVariant((current) => {
+      if (!current) {
+        return config.default;
+      }
+      return config.options.some((option) => option.id === current)
+        ? current
+        : config.default;
+    });
+  }, [selectedUnit]);
+
   useEffect(() => {
     if (selectedUnit === "custom") {
+      setRawSeries(null);
       setSeries(null);
       setStatus({
         state: "idle",
@@ -90,6 +178,7 @@ export default function HomePage() {
     }
 
     if (!selectedAsset || !selectedUnit) {
+      setRawSeries(null);
       setSeries(null);
       setStatus({ state: "idle", message: "Choose an asset to begin." });
       return;
@@ -121,12 +210,20 @@ export default function HomePage() {
           return;
         }
 
-        setSeries(payload);
+        setRawSeries(payload);
+        setSeries(
+          applyUnitVariantToSeries(
+            payload,
+            selectedUnit,
+            selectedUnitVariant
+          )
+        );
         setStatus({ state: "loaded", message: "" });
       } catch (error) {
         if (cancelled) {
           return;
         }
+        setRawSeries(null);
         setSeries(null);
         setStatus({
           state: "error",
@@ -151,6 +248,7 @@ export default function HomePage() {
     }
 
     if (!endpoint) {
+      setRawSeries(null);
       setSeries(null);
       setStatus({
         state: "error",
@@ -174,6 +272,17 @@ export default function HomePage() {
     selectedGoldVariant,
   ]);
 
+  useEffect(() => {
+    if (!rawSeries) {
+      setSeries(null);
+      return;
+    }
+
+    setSeries(
+      applyUnitVariantToSeries(rawSeries, selectedUnit, selectedUnitVariant)
+    );
+  }, [rawSeries, selectedUnit, selectedUnitVariant]);
+
   const chartTitle = useMemo(() => {
     if (!activeAsset || !activeUnit) {
       return "Asset priced in goods";
@@ -187,8 +296,12 @@ export default function HomePage() {
       return `${activeAsset.label} priced in ${activeGoldVariant?.label ?? activeUnit.label}`;
     }
 
-    return `${activeAsset.label} priced in ${activeUnit.label}`;
-  }, [activeAsset, activeGoldVariant?.label, activeUnit, selectedUnit]);
+    const unitDescriptor = activeUnitVariant
+      ? `${activeUnit.label} (${activeUnitVariant.label})`
+      : activeUnit.label;
+
+    return `${activeAsset.label} priced in ${unitDescriptor}`;
+  }, [activeAsset, activeGoldVariant?.label, activeUnit, activeUnitVariant, selectedUnit]);
 
   return (
     <section className="site-wrap chart-section">
@@ -233,8 +346,8 @@ export default function HomePage() {
       </div>
 
       {selectedAsset === "GOLD" && selectedUnit === "usd" ? (
-        <div className="gold-variant-picker">
-          <span className="gold-variant-picker__label">Gold metric</span>
+        <div className="variant-picker">
+          <span className="variant-picker__label">Gold metric</span>
           <div
             className="range-toggle"
             role="group"
@@ -250,6 +363,32 @@ export default function HomePage() {
                 onClick={() => setSelectedGoldVariant(variant.id)}
               >
                 {variant.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {UNIT_VARIANTS[selectedUnit] ? (
+        <div className="variant-picker">
+          <span className="variant-picker__label">
+            {`${activeUnit?.label ?? "Unit"} measurement`}
+          </span>
+          <div
+            className="range-toggle"
+            role="group"
+            aria-label={`Select ${activeUnit?.label ?? "unit"} measurement`}
+          >
+            {UNIT_VARIANTS[selectedUnit].options.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={`range-toggle__button${
+                  selectedUnitVariant === option.id ? " is-active" : ""
+                }`}
+                onClick={() => setSelectedUnitVariant(option.id)}
+              >
+                {option.label}
               </button>
             ))}
           </div>

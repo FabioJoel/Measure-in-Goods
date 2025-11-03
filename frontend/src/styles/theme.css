@@ -424,14 +424,14 @@ a {
   font-weight: 600;
 }
 
-.gold-variant-picker {
+.variant-picker {
   margin-top: 18px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.gold-variant-picker__label {
+.variant-picker__label {
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
