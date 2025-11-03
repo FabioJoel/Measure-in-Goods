@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import AssetSelector, {
-  AVAILABLE_ASSETS,
-} from "../components/AssetSelector.jsx";
+import AssetSelector, { AVAILABLE_ASSETS } from "../components/AssetSelector.jsx";
 import ChartDisplay from "../components/ChartDisplay.jsx";
 import CustomBasketBuilder from "../components/CustomBasketBuilder.jsx";
 import SearchSelect from "../components/SearchSelect.jsx";
@@ -19,8 +17,6 @@ const PRICING_UNITS = [
 const SERIES_ENDPOINTS = {
   "SPX::gold": "/ratios/sp500-gold",
   "SPY::gold": "/ratios/sp500-gold",
-  "SPX::usd": "/ratios/sp500-usd",
-  "SPY::usd": "/ratios/sp500-usd",
 };
 
 const BASKET_RESOURCES = [
@@ -33,6 +29,12 @@ const BASKET_RESOURCES = [
   { id: "wheat", label: "Wheat (bushel)", category: "Agriculture" },
   { id: "rice", label: "Rice (cwt)", category: "Agriculture" },
 ];
+
+const buildStaticUrl = (path) => {
+  const base = import.meta.env.BASE_URL ?? "/";
+  const normalized = path.startsWith("/") ? path.slice(1) : path;
+  return `${base}${normalized}`;
+};
 
 export default function HomePage() {
   const [selectedAsset, setSelectedAsset] = useState(
@@ -77,21 +79,75 @@ export default function HomePage() {
       return;
     }
 
-    const endpoint = SERIES_ENDPOINTS[`${selectedAsset}::${selectedUnit}`];
     const unitLabel = activeUnit?.label ?? "basket";
-
-    if (!endpoint) {
-      setSeries(null);
-      setStatus({
-        state: "error",
-        message: `Pricing ${selectedAsset} in ${unitLabel} is not available yet.`,
-      });
-      return;
-    }
-
     let cancelled = false;
 
-    async function fetchSeries() {
+    const unsupportedMessage = `Pricing ${selectedAsset} in ${unitLabel} is not available yet.`;
+
+    async function fetchUsdSeries() {
+      const supportsUsd = ["SPX", "SPY"].includes(selectedAsset);
+      if (!supportsUsd) {
+        setSeries(null);
+        setStatus({ state: "error", message: unsupportedMessage });
+        return;
+      }
+
+      setStatus({
+        state: "loading",
+        message: `Loading ${selectedAsset} priced in ${unitLabel}…`,
+      });
+
+      try {
+        const response = await fetch(buildStaticUrl("data/sp500.json"), {
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+        const payload = await response.json();
+        const observations = Array.isArray(payload?.observations)
+          ? payload.observations
+          : [];
+
+        const points = observations
+          .map((entry) => {
+            const value = Number.parseFloat(entry.value);
+            if (!entry.date || Number.isNaN(value)) {
+              return null;
+            }
+            return { timestamp: entry.date, value };
+          })
+          .filter(Boolean);
+
+        if (cancelled) {
+          return;
+        }
+
+        if (points.length === 0) {
+          setSeries(null);
+          setStatus({
+            state: "error",
+            message: "USD pricing feed has no observations yet.",
+          });
+          return;
+        }
+
+        setSeries({ name: "sp500-usd", points });
+        setStatus({ state: "loaded", message: "" });
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        setSeries(null);
+        setStatus({
+          state: "error",
+          message:
+            error instanceof Error ? error.message : "Unable to load data.",
+        });
+      }
+    }
+
+    async function fetchApiSeries(endpoint) {
       setStatus({
         state: "loading",
         message: `Loading ${selectedAsset} priced in ${unitLabel}…`,
@@ -123,7 +179,22 @@ export default function HomePage() {
       }
     }
 
-    fetchSeries();
+    if (selectedUnit === "usd") {
+      fetchUsdSeries();
+    } else {
+      const endpoint = SERIES_ENDPOINTS[`${selectedAsset}::${selectedUnit}`];
+      if (!endpoint) {
+        setSeries(null);
+        setStatus({
+          state: "error",
+          message: unsupportedMessage,
+        });
+        return;
+      }
+
+      fetchApiSeries(endpoint);
+    }
+
     return () => {
       cancelled = true;
     };
