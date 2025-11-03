@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from datetime import date
 from pathlib import Path
 from typing import Sequence
 
 from .fred import TimeSeriesPoint
+
+logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_DATA_DIR = PROJECT_ROOT / "frontend" / "public" / "data"
@@ -33,10 +36,13 @@ def get_sp500_series() -> list[TimeSeriesPoint]:
     dataset_path = Path(
         os.environ.get("SP500_SERIES_PATH", PUBLIC_DATA_DIR / "sp500.json")
     )
-    series = _series_from_json(dataset_path)
+    series = _series_from_json(dataset_path, label="sp500")
     if series:
         return series
 
+    logger.warning(
+        "Using built-in fallback sample for SP500 series; dataset not available."
+    )
     rows = [
         ("2023-01-31", 4076.60),
         ("2023-02-28", 3970.15),
@@ -64,10 +70,13 @@ def get_gold_series() -> list[TimeSeriesPoint]:
     dataset_path = Path(
         os.environ.get("GOLD_SERIES_PATH", PUBLIC_DATA_DIR / "xauusd.json")
     )
-    series = _series_from_json(dataset_path)
+    series = _series_from_json(dataset_path, label="gold")
     if series:
         return series
 
+    logger.warning(
+        "Using built-in fallback sample for gold series; dataset not available."
+    )
     rows = [
         ("2023-01-31", 1928.36),
         ("2023-02-28", 1836.87),
@@ -107,19 +116,24 @@ def get_usd_chf_series() -> list[TimeSeriesPoint]:
     return _series_from_rows(rows)
 
 
-def _series_from_json(path: Path) -> list[TimeSeriesPoint]:
+def _series_from_json(path: Path, *, label: str) -> list[TimeSeriesPoint]:
     """Load a FRED-style JSON snapshot into :class:`TimeSeriesPoint` records."""
 
     try:
         with path.open("r", encoding="utf-8") as fh:
             payload = json.load(fh)
     except FileNotFoundError:
+        logger.warning("Dataset '%s' not found at %s", label, path)
         return []
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as exc:
+        logger.warning("Dataset '%s' at %s is not valid JSON: %s", label, path, exc)
         return []
 
     observations = payload.get("observations")
     if not isinstance(observations, list):
+        logger.warning(
+            "Dataset '%s' at %s is missing an 'observations' list", label, path
+        )
         return []
 
     points: list[TimeSeriesPoint] = []
@@ -135,14 +149,24 @@ def _series_from_json(path: Path) -> list[TimeSeriesPoint]:
         try:
             parsed_date = date.fromisoformat(raw_date)
         except ValueError:
+            logger.debug("Skipping %s entry with invalid date %r", label, raw_date)
             continue
 
         try:
             numeric_value = float(raw_value)
         except (TypeError, ValueError):
+            logger.debug("Skipping %s entry with invalid value %r", label, raw_value)
             continue
 
         points.append(TimeSeriesPoint(timestamp=parsed_date, value=numeric_value))
 
     points.sort(key=lambda item: item.timestamp)
+
+    if points:
+        logger.info(
+            "Loaded %s observations for '%s' from %s", len(points), label, path
+        )
+    else:
+        logger.warning("Dataset '%s' at %s contained no valid observations", label, path)
+
     return points
