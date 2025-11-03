@@ -319,7 +319,13 @@ export default function ChartDisplay({ meta, series, status }) {
         ? nativeEvent.offsetX
         : event.clientX - bounds.left;
     const clampedX = Math.min(Math.max(relativeX, 0), bounds.width);
-    const x = clampedX + CHART_MARGIN.left;
+    const svgX = clampedX + CHART_MARGIN.left;
+
+    const offsetX = Math.min(
+      Math.max(clampedX, CHART_MARGIN.left - bounds.left),
+      bounds.width - CHART_MARGIN.right + CHART_MARGIN.left
+    );
+    const x = offsetX + CHART_MARGIN.left;
     const index = findNearestIndex(geometry.chartPoints, x);
     setHoverIndex(index);
   };
