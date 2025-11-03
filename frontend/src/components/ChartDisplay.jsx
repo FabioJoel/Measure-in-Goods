@@ -359,18 +359,6 @@ export default function ChartDisplay({ meta, series, status }) {
         </div>
       </div>
 
-      <div className="chart-summary">
-        <div className="chart-summary__group">
-          <span className="chart-summary__label">Price</span>
-          <strong className="chart-summary__value">
-            {formatValue(pointForDisplay.value)}
-          </strong>
-          <span className="chart-summary__date">
-            {LONG_DATE_FORMATTER.format(pointForDisplay.date)}
-          </span>
-        </div>
-      </div>
-
       <div className="ratio-chart" ref={chartRef}>
         <svg
           width={geometry.width}
@@ -516,11 +504,6 @@ export default function ChartDisplay({ meta, series, status }) {
           </div>
         ) : null}
       </div>
-
-      <p className="chart-footnote">
-        Hover or tap to inspect individual observations. More overlays, basket
-        comparisons, and export tools are on the roadmap.
-      </p>
     </div>
   );
 }
