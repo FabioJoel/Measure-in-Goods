@@ -312,8 +312,14 @@ export default function ChartDisplay({ meta, series, status }) {
       return;
     }
 
+    const nativeEvent = event.nativeEvent;
     const bounds = event.currentTarget.getBoundingClientRect();
-    const x = event.clientX - bounds.left;
+    const relativeX =
+      typeof nativeEvent.offsetX === "number"
+        ? nativeEvent.offsetX
+        : event.clientX - bounds.left;
+    const clampedX = Math.min(Math.max(relativeX, 0), bounds.width);
+    const x = clampedX + CHART_MARGIN.left;
     const index = findNearestIndex(geometry.chartPoints, x);
     setHoverIndex(index);
   };
@@ -330,7 +336,7 @@ export default function ChartDisplay({ meta, series, status }) {
         Math.max(tooltipPoint.x, CHART_MARGIN.left + 12),
         geometry.width - CHART_MARGIN.right - 12
       )
-    : geometry.width - CHART_MARGIN.right - 12;
+    : CHART_MARGIN.left + 12;
 
   const startPoint = geometry.chartPoints[0];
   const endPoint = geometry.chartPoints[geometry.chartPoints.length - 1];
