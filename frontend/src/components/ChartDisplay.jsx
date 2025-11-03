@@ -225,6 +225,21 @@ export default function ChartDisplay({ meta, series, status }) {
     setHoverIndex(null);
   }, [series, rangeId]);
 
+  const normalizedPoints = useMemo(
+    () => normalizeSeries(series?.points),
+    [series?.points]
+  );
+
+  const filteredPoints = useMemo(
+    () => filterByRange(normalizedPoints, rangeId),
+    [normalizedPoints, rangeId]
+  );
+
+  const geometry = useMemo(
+    () => buildChartGeometry(filteredPoints, size),
+    [filteredPoints, size]
+  );
+
   if (status.state === "loading") {
     return (
       <div className="chart-display">
@@ -266,11 +281,6 @@ export default function ChartDisplay({ meta, series, status }) {
     );
   }
 
-  const normalizedPoints = useMemo(
-    () => normalizeSeries(series?.points),
-    [series?.points]
-  );
-
   if (normalizedPoints.length === 0) {
     return (
       <div className="chart-display">
@@ -278,16 +288,6 @@ export default function ChartDisplay({ meta, series, status }) {
       </div>
     );
   }
-
-  const filteredPoints = useMemo(
-    () => filterByRange(normalizedPoints, rangeId),
-    [normalizedPoints, rangeId]
-  );
-
-  const geometry = useMemo(
-    () => buildChartGeometry(filteredPoints, size),
-    [filteredPoints, size]
-  );
 
   if (geometry.chartPoints.length < 2) {
     return (
