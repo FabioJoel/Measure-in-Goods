@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+import json
+import os
 from datetime import date
+from pathlib import Path
 from typing import Sequence
 
 from .fred import TimeSeriesPoint
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PUBLIC_DATA_DIR = PROJECT_ROOT / "frontend" / "public" / "data"
 
 
 def _series_from_rows(rows: Sequence[tuple[str, float]]) -> list[TimeSeriesPoint]:
@@ -18,7 +24,18 @@ def _series_from_rows(rows: Sequence[tuple[str, float]]) -> list[TimeSeriesPoint
 
 
 def get_sp500_series() -> list[TimeSeriesPoint]:
-    """Return 2023 month-end S&P 500 closing levels."""
+    """Return S&P 500 closing levels from local data if available.
+
+    Falls back to a 2023 month-end sample series when the project data snapshot
+    has not been generated yet.
+    """
+
+    dataset_path = Path(
+        os.environ.get("SP500_SERIES_PATH", PUBLIC_DATA_DIR / "sp500.json")
+    )
+    series = _series_from_json(dataset_path)
+    if series:
+        return series
 
     rows = [
         ("2023-01-31", 4076.60),
@@ -39,7 +56,17 @@ def get_sp500_series() -> list[TimeSeriesPoint]:
 
 
 def get_gold_series() -> list[TimeSeriesPoint]:
-    """Return 2023 month-end gold spot prices in USD per troy ounce."""
+    """Return gold spot prices in USD from local data when available.
+
+    Falls back to a 2023 month-end sample series if no snapshot exists yet.
+    """
+
+    dataset_path = Path(
+        os.environ.get("GOLD_SERIES_PATH", PUBLIC_DATA_DIR / "xauusd.json")
+    )
+    series = _series_from_json(dataset_path)
+    if series:
+        return series
 
     rows = [
         ("2023-01-31", 1928.36),
@@ -78,3 +105,44 @@ def get_usd_chf_series() -> list[TimeSeriesPoint]:
     ]
 
     return _series_from_rows(rows)
+
+
+def _series_from_json(path: Path) -> list[TimeSeriesPoint]:
+    """Load a FRED-style JSON snapshot into :class:`TimeSeriesPoint` records."""
+
+    try:
+        with path.open("r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+    except FileNotFoundError:
+        return []
+    except json.JSONDecodeError:
+        return []
+
+    observations = payload.get("observations")
+    if not isinstance(observations, list):
+        return []
+
+    points: list[TimeSeriesPoint] = []
+    for entry in observations:
+        if not isinstance(entry, dict):
+            continue
+
+        raw_date = entry.get("date")
+        raw_value = entry.get("value")
+        if raw_date in (None, "") or raw_value in (None, ".", ""):
+            continue
+
+        try:
+            parsed_date = date.fromisoformat(raw_date)
+        except ValueError:
+            continue
+
+        try:
+            numeric_value = float(raw_value)
+        except (TypeError, ValueError):
+            continue
+
+        points.append(TimeSeriesPoint(timestamp=parsed_date, value=numeric_value))
+
+    points.sort(key=lambda item: item.timestamp)
+    return points
