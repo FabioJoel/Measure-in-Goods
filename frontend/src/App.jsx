@@ -77,7 +77,15 @@ function App() {
           <ul className="site-nav__coming-list">
             <li>Custom commodity baskets</li>
             <li>CPI benchmark baskets</li>
-            <li>ANCAP commodity standard</li>
+            <li>
+              <a
+                href="https://en.wikipedia.org/wiki/ANCAP_(commodity_standard)"
+                target="_blank"
+                rel="noreferrer"
+              >
+                ANCAP commodity standard
+              </a>
+            </li>
             <li>Regional home price lenses</li>
           </ul>
         </div>
