@@ -4,7 +4,7 @@ The Measure in Goods project explores comparing purchasing power across currenci
 
 ## Project structure
 
-- `data/` – placeholder modules describing integrations with external data sources such as FRED and the World Bank.
+- `data/` – Python scripts for fetching reference series (e.g., FRED S&P 500, Stooq XAUUSD) plus helper utilities.
 - `src/backend/` – FastAPI application entry point, pricing utilities, and a ratio view for the S&P 500 priced in gold.
 - `frontend/` – React/Vite single-page app scaffold with starter components and a shared theme.
 - `pyproject.toml` – backend dependency declaration and local development helpers.
@@ -44,9 +44,10 @@ when it is omitted.
 
 ### Data provenance & FRED® API notice
 
-- S&P 500 price index (series `SP500`) and London bullion market gold fix in USD
-  (series `GOLDAMGBD228NLBM`) are retrieved from the Federal Reserve Economic
-  Data (FRED®) API.
+- S&P 500 price index (series `SP500`) is retrieved from the Federal Reserve
+  Economic Data (FRED®) API.
+- Gold spot price (XAUUSD) is downloaded from Stooq's daily CSV export
+  (https://stooq.com/q/d/l/?s=xauusd&i=d).
 - This product uses the FRED® API but is not endorsed or certified by the
   Federal Reserve Bank of St. Louis.
 - By using this application or any derivative dataset you agree to the
@@ -61,22 +62,23 @@ when it is omitted.
 
 The repo ships with a GitHub Actions workflow (`.github/workflows/fetch-and-deploy.yml`) that:
 
-1. Fetches the S&P 500 price (`SP500`) and total-return (`SP500TR`) series via the
-   FRED® API.
-2. Writes the JSON payloads to `frontend/public/data/` so the frontend can load
+1. Fetches the S&P 500 price (`SP500`) series via the FRED® API.
+2. Downloads the gold spot (`XAUUSD`) series from Stooq’s public CSV endpoint.
+3. Writes the JSON payloads to `frontend/public/data/` so the frontend can load
    them statically.
-3. Builds the Vite frontend and deploys it to GitHub Pages.
+4. Builds the Vite frontend and deploys it to GitHub Pages.
 
 To enable the automation you must add a repository secret named `FRED_API_KEY`
 containing your personal FRED API key (GitHub → *Settings → Secrets and variables → Actions*).
-You can also run the script locally:
+You can also run the scripts locally:
 
 ```bash
 FRED_API_KEY=your_key python data/fetch_sp500_fred.py --series-id SP500 --format json --output frontend/public/data/sp500.json
+python data/fetch_stooq_xauusd.py --output frontend/public/data/xauusd.json
 ```
 
 The frontend renders a “Daily snapshot” section so you can confirm the feeds
-once the workflow (or the local script) runs.
+once the workflow (or the local scripts) run.
 
 A side project for valuing everything in terms of real-world goods.
 

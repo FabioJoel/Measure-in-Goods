@@ -46,3 +46,10 @@ def sp500_in_gold(engine: pricing.PricingEngine = Depends(get_pricing_engine)) -
     """Return the S&P 500 priced in ounces of gold."""
 
     return engine.compute_sp500_in_gold()
+
+
+@app.get("/ratios/sp500-usd", response_model=BasketComposition)
+def sp500_in_usd(engine: pricing.PricingEngine = Depends(get_pricing_engine)) -> BasketComposition:
+    """Return the S&P 500 priced in USD."""
+
+    return engine.compute_sp500_in_usd()

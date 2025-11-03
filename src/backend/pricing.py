@@ -31,6 +31,15 @@ class PricingEngine:
             name="sp500-in-gold",
         )
 
+    def compute_sp500_in_usd(self) -> BasketComposition:
+        """Return the S&P 500 priced in USD using sample data."""
+
+        points = [
+            BasketSeriesPoint(timestamp=point.timestamp, value=point.value)
+            for point in get_sp500_series()
+        ]
+        return BasketComposition(name="sp500-in-usd", points=points)
+
     def _generate_placeholder_series(self, assets: List[AssetSelection]) -> list[BasketSeriesPoint]:
         """Create a short synthetic series to unblock frontend development."""
 

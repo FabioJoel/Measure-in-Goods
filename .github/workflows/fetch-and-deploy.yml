@@ -43,13 +43,10 @@ jobs:
             --format json \
             --output frontend/public/data/sp500.json
 
-      - name: Fetch gold spot price (LBMA)
+      - name: Fetch gold spot price (Stooq)
         run: |
-          python data/fetch_sp500_fred.py \
-            --series-id GOLDAMGBD228NLBM \
-            --start-date 1970-01-01 \
-            --format json \
-            --output frontend/public/data/gold.json
+          python data/fetch_stooq_xauusd.py \
+            --output frontend/public/data/xauusd.json
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

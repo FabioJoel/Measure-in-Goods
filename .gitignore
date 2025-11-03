@@ -9,4 +9,4 @@ frontend/node_modules/
 
 # Local data snapshots — workflow generates fresh copies
 frontend/public/data/sp500.json
-frontend/public/data/gold.json
+frontend/public/data/xauusd.json

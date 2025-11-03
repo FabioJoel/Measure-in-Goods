@@ -124,8 +124,8 @@ export default function DataSnapshots({ sectionRef = null }) {
       <div className="data-snapshots__grid">
         <SeriesCard title="S&amp;P 500 index" path="data/sp500.json" />
         <SeriesCard
-          title="Gold spot price (LBMA)"
-          path="data/gold.json"
+          title="Gold spot price (XAUUSD)"
+          path="data/xauusd.json"
         />
       </div>
     </section>
