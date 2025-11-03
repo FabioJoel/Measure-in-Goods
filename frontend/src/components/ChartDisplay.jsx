@@ -193,7 +193,7 @@ function findNearestIndex(points, x) {
 export default function ChartDisplay({ meta, series, status }) {
   const chartRef = useRef(null);
   const [size, setSize] = useState({ width: 920, height: 360 });
-  const [rangeId, setRangeId] = useState("5y");
+  const [rangeId, setRangeId] = useState("max");
   const [hoverIndex, setHoverIndex] = useState(null);
 
   useEffect(() => {
