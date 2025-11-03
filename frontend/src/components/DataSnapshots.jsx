@@ -122,11 +122,7 @@ export default function DataSnapshots({ sectionRef = null }) {
         runs with your FRED API key, the latest measurements will appear here.
       </p>
       <div className="data-snapshots__grid">
-        <SeriesCard title="S&amp;P 500 index (price)" path="data/sp500.json" />
-        <SeriesCard
-          title="S&amp;P 500 index (total return)"
-          path="data/sp500_total_return.json"
-        />
+        <SeriesCard title="S&amp;P 500 index" path="data/sp500.json" />
       </div>
     </section>
   );

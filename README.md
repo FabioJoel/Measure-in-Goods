@@ -44,8 +44,8 @@ when it is omitted.
 
 ### Data provenance & FRED® API notice
 
-- S&P 500 price (SP500) and total return (SP500TR) series are retrieved from the
-  Federal Reserve Economic Data (FRED®) API.
+- S&P 500 price index (series `SP500`) is retrieved from the Federal Reserve
+  Economic Data (FRED®) API.
 - This product uses the FRED® API but is not endorsed or certified by the
   Federal Reserve Bank of St. Louis.
 - By using this application or any derivative dataset you agree to the
