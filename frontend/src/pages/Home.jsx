@@ -30,32 +30,48 @@ const SERIES_ENDPOINTS = {
 const TROY_OUNCES_PER_KILOGRAM = 32.1507466;
 const GRAMS_PER_TROY_OUNCE = 31.1034768;
 
-const GOLD_VARIANTS = [
-  { id: "ounce", label: "Spot price (USD/oz troy)" },
-  { id: "kilogram", label: "Price per kilogram (USD/kg)" },
-  { id: "gram", label: "Price per gram (USD/g)" },
+const GOLD_VARIANT_OPTIONS = [
+  {
+    id: "ounce",
+    label: "Troy ounce",
+    chartLabel: "USD per troy ounce",
+  },
+  {
+    id: "kilogram",
+    label: "Kilogram",
+    chartLabel: "USD per kilogram",
+  },
+  {
+    id: "gram",
+    label: "Gram",
+    chartLabel: "USD per gram",
+  },
 ];
+
+const GOLD_VARIANTS = GOLD_VARIANT_OPTIONS.map(({ id, label, chartLabel }) => ({
+  id,
+  label,
+  chartLabel,
+}));
 
 const UNIT_VARIANTS = {
   gold: {
     default: "ounce",
-    options: [
-      {
-        id: "ounce",
-        label: "Troy ounce",
-        transform: (value) => value,
+    options: GOLD_VARIANT_OPTIONS.map(({ id, label, chartLabel }) => ({
+      id,
+      label,
+      chartLabel,
+      transform: (value) => {
+        switch (id) {
+          case "kilogram":
+            return value / TROY_OUNCES_PER_KILOGRAM;
+          case "gram":
+            return value * GRAMS_PER_TROY_OUNCE;
+          default:
+            return value;
+        }
       },
-      {
-        id: "kilogram",
-        label: "Kilogram",
-        transform: (value) => value / TROY_OUNCES_PER_KILOGRAM,
-      },
-      {
-        id: "gram",
-        label: "Gram",
-        transform: (value) => value * GRAMS_PER_TROY_OUNCE,
-      },
-    ],
+    })),
   },
 };
 
@@ -293,11 +309,16 @@ export default function HomePage() {
     }
 
     if (activeAsset.id === "GOLD" && selectedUnit === "usd") {
-      return `${activeAsset.label} priced in ${activeGoldVariant?.label ?? activeUnit.label}`;
+      const descriptor =
+        activeGoldVariant?.chartLabel ??
+        (activeGoldVariant?.label
+          ? `USD per ${activeGoldVariant.label.toLowerCase()}`
+          : activeUnit.label);
+      return `${activeAsset.label} priced in ${descriptor}`;
     }
 
     const unitDescriptor = activeUnitVariant
-      ? `${activeUnit.label} (${activeUnitVariant.label})`
+      ? activeUnitVariant.chartLabel ?? `${activeUnit.label} (${activeUnitVariant.label})`
       : activeUnit.label;
 
     return `${activeAsset.label} priced in ${unitDescriptor}`;
