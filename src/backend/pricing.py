@@ -13,6 +13,7 @@ from data.sample_series import (
 )
 
 TROY_OUNCES_PER_KILOGRAM = 32.1507466
+GRAMS_PER_TROY_OUNCE = 31.1034768
 
 
 class PricingEngine:
@@ -83,6 +84,18 @@ class PricingEngine:
             for point in get_gold_series()
         ]
         return BasketComposition(name="gold-in-usd-per-kg", points=points)
+
+    def compute_gold_in_usd_per_gram(self) -> BasketComposition:
+        """Return gold priced in USD per gram."""
+
+        points = [
+            BasketSeriesPoint(
+                timestamp=point.timestamp,
+                value=point.value / GRAMS_PER_TROY_OUNCE,
+            )
+            for point in get_gold_series()
+        ]
+        return BasketComposition(name="gold-in-usd-per-gram", points=points)
 
     def _compute_ratio(
         self,

@@ -30,6 +30,7 @@ const SERIES_ENDPOINTS = {
 const GOLD_VARIANTS = [
   { id: "ounce", label: "Spot price (USD/oz troy)" },
   { id: "kilogram", label: "Price per kilogram (USD/kg)" },
+  { id: "gram", label: "Price per gram (USD/g)" },
 ];
 
 const BASKET_RESOURCES = [
@@ -141,10 +142,11 @@ export default function HomePage() {
       if (selectedUnit !== "usd") {
         endpoint = null;
       } else {
-        endpoint =
-          selectedGoldVariant === "kilogram"
-            ? "/ratios/gold-usd-kg"
-            : "/ratios/gold-usd";
+        endpoint = {
+          kilogram: "/ratios/gold-usd-kg",
+          gram: "/ratios/gold-usd-gram",
+          ounce: "/ratios/gold-usd",
+        }[selectedGoldVariant] ?? "/ratios/gold-usd";
       }
     }
 

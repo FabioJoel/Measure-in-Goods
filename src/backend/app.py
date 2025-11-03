@@ -74,3 +74,10 @@ def gold_in_usd_per_kg(engine: pricing.PricingEngine = Depends(get_pricing_engin
     """Return gold priced in USD per kilogram."""
 
     return engine.compute_gold_in_usd_per_kg()
+
+
+@app.get("/ratios/gold-usd-gram", response_model=BasketComposition)
+def gold_in_usd_per_gram(engine: pricing.PricingEngine = Depends(get_pricing_engine)) -> BasketComposition:
+    """Return gold priced in USD per gram."""
+
+    return engine.compute_gold_in_usd_per_gram()
