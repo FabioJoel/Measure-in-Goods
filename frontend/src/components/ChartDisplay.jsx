@@ -327,10 +327,10 @@ export default function ChartDisplay({ meta, series, status }) {
 
   const tooltipLeft = tooltipPoint
     ? Math.min(
-        Math.max(tooltipPoint.x + CHART_MARGIN.left, CHART_MARGIN.left + 12),
-        geometry.width - 140
+        Math.max(tooltipPoint.x, CHART_MARGIN.left + 12),
+        geometry.width - CHART_MARGIN.right - 12
       )
-    : 0;
+    : geometry.width - CHART_MARGIN.right - 12;
 
   const startPoint = geometry.chartPoints[0];
   const endPoint = geometry.chartPoints[geometry.chartPoints.length - 1];
