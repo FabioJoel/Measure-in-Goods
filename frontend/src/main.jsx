@@ -8,16 +8,25 @@ import DataPage from "./pages/Data.jsx";
 import AboutPage from "./pages/About.jsx";
 import "./styles/theme.css";
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
-    <BrowserRouter basename={import.meta.env.BASE_URL}>
-      <Routes>
-        <Route path="/" element={<App />}>
-          <Route index element={<HomePage />} />
-          <Route path="data" element={<DataPage />} />
-          <Route path="about" element={<AboutPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
-  </React.StrictMode>
-);
+const container = document.getElementById("root");
+
+if (!container) {
+  throw new Error("Unable to find #root element to mount the app.");
+}
+
+if (!container.__appRoot) {
+  container.__appRoot = ReactDOM.createRoot(container);
+  container.__appRoot.render(
+    <React.StrictMode>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
+        <Routes>
+          <Route path="/" element={<App />}>
+            <Route index element={<HomePage />} />
+            <Route path="data" element={<DataPage />} />
+            <Route path="about" element={<AboutPage />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </React.StrictMode>
+  );
+}
