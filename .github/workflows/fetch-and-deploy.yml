@@ -39,8 +39,17 @@ jobs:
         run: |
           python data/fetch_sp500_fred.py \
             --series-id SP500 \
+            --start-date 1970-01-01 \
             --format json \
             --output frontend/public/data/sp500.json
+
+      - name: Fetch gold spot price (LBMA)
+        run: |
+          python data/fetch_sp500_fred.py \
+            --series-id GOLDAMGBD228NLBM \
+            --start-date 1970-01-01 \
+            --format json \
+            --output frontend/public/data/gold.json
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

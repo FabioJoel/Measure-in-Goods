@@ -123,6 +123,10 @@ export default function DataSnapshots({ sectionRef = null }) {
       </p>
       <div className="data-snapshots__grid">
         <SeriesCard title="S&amp;P 500 index" path="data/sp500.json" />
+        <SeriesCard
+          title="Gold spot price (LBMA)"
+          path="data/gold.json"
+        />
       </div>
     </section>
   );
