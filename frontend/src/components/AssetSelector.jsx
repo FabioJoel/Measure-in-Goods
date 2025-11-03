@@ -15,10 +15,14 @@ export const AVAILABLE_ASSETS = [
   { id: "WPIACO", label: "World Commodity Price Index" },
 ];
 
-function AssetSelector({ selectedAsset = null, onSelectionChange }) {
+function AssetSelector({
+  options = AVAILABLE_ASSETS,
+  selectedAsset = null,
+  onSelectionChange,
+}) {
   return (
     <SearchSelect
-      options={AVAILABLE_ASSETS}
+      options={options}
       value={selectedAsset}
       onChange={onSelectionChange}
       placeholder="Search assets"

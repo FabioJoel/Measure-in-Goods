@@ -6,7 +6,12 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import pricing
-from .models import BasketComputationRequest, BasketComposition, HealthResponse
+from .models import (
+    BasketComputationRequest,
+    BasketComposition,
+    CapabilityMatrix,
+    HealthResponse,
+)
 
 app = FastAPI(title="Measure in Goods API")
 
@@ -29,6 +34,13 @@ def healthcheck() -> HealthResponse:
     """Lightweight endpoint for uptime monitoring."""
 
     return HealthResponse(status="ok")
+
+
+@app.get("/metadata/capabilities", response_model=CapabilityMatrix)
+def list_capabilities() -> CapabilityMatrix:
+    """Expose available asset/unit combinations to drive frontend selectors."""
+
+    return pricing.get_capability_matrix()
 
 
 @app.post("/basket/compute", response_model=BasketComposition)

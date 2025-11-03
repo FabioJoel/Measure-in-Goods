@@ -4,7 +4,15 @@ from __future__ import annotations
 
 from typing import Sequence
 
-from .models import BasketComputationRequest, BasketComposition, BasketSeriesPoint
+from .models import (
+    AssetCapability,
+    BasketComputationRequest,
+    BasketComposition,
+    BasketSeriesPoint,
+    CapabilityMatrix,
+    UnitCapability,
+    UnitVariantCapability,
+)
 from data.fred import TimeSeriesPoint
 from data.sample_series import (
     get_gold_series,
@@ -123,3 +131,85 @@ class PricingEngine:
 
         ratio_points.sort(key=lambda entry: entry.timestamp)
         return BasketComposition(name=name, points=ratio_points)
+
+
+def get_capability_matrix() -> CapabilityMatrix:
+    """Return frontend-facing capability metadata for asset/unit combinations."""
+
+    return CapabilityMatrix(
+        assets=[
+            AssetCapability(
+                id="SPX",
+                label="S&P 500 Index (SPX)",
+                units=[
+                    UnitCapability(
+                        id="gold",
+                        label="Gold",
+                        endpoint="/ratios/sp500-gold",
+                    ),
+                    UnitCapability(
+                        id="usd",
+                        label="USD",
+                        endpoint="/ratios/sp500-usd",
+                    ),
+                    UnitCapability(
+                        id="chf",
+                        label="Swiss franc (CHF)",
+                        endpoint="/ratios/sp500-chf",
+                    ),
+                ],
+            ),
+            AssetCapability(
+                id="SPY",
+                label="SPDR S&P 500 ETF (SPY)",
+                units=[
+                    UnitCapability(
+                        id="gold",
+                        label="Gold",
+                        endpoint="/ratios/sp500-gold",
+                    ),
+                    UnitCapability(
+                        id="usd",
+                        label="USD",
+                        endpoint="/ratios/sp500-usd",
+                    ),
+                    UnitCapability(
+                        id="chf",
+                        label="Swiss franc (CHF)",
+                        endpoint="/ratios/sp500-chf",
+                    ),
+                ],
+            ),
+            AssetCapability(
+                id="GOLD",
+                label="Gold",
+                units=[
+                    UnitCapability(
+                        id="usd",
+                        label="USD",
+                        default_variant_id="ounce",
+                        variants=[
+                            UnitVariantCapability(
+                                id="ounce",
+                                label="Troy ounce",
+                                endpoint="/ratios/gold-usd",
+                                chart_label="USD per troy ounce",
+                            ),
+                            UnitVariantCapability(
+                                id="kilogram",
+                                label="Kilogram",
+                                endpoint="/ratios/gold-usd-kg",
+                                chart_label="USD per kilogram",
+                            ),
+                            UnitVariantCapability(
+                                id="gram",
+                                label="Gram",
+                                endpoint="/ratios/gold-usd-gram",
+                                chart_label="USD per gram",
+                            ),
+                        ],
+                    )
+                ],
+            ),
+        ]
+    )

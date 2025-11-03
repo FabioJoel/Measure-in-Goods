@@ -76,7 +76,9 @@ function App() {
           <span className="site-nav__section-title">Coming soon</span>
           <ul className="site-nav__coming-list">
             <li>Custom commodity baskets</li>
+            <li>Silver pricing lens</li>
             <li>CPI benchmark baskets</li>
+            <li>Energy basket pricing</li>
             <li>
               <a
                 href="https://en.wikipedia.org/wiki/ANCAP_(commodity_standard)"

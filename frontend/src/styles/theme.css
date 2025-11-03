@@ -524,6 +524,12 @@ a {
   color: var(--muted);
 }
 
+.selector-row__notice {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .search-select {
   display: flex;
   flex-direction: column;

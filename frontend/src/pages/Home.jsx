@@ -1,107 +1,65 @@
 import { useEffect, useMemo, useState } from "react";
 
-import AssetSelector, {
-  AVAILABLE_ASSETS,
-} from "../components/AssetSelector.jsx";
+import AssetSelector from "../components/AssetSelector.jsx";
 import ChartDisplay from "../components/ChartDisplay.jsx";
 import CustomBasketBuilder from "../components/CustomBasketBuilder.jsx";
 import SearchSelect from "../components/SearchSelect.jsx";
 
-const PRICING_UNITS = [
-  { id: "gold", label: "Gold" },
-  { id: "usd", label: "USD" },
-  { id: "chf", label: "Swiss franc (CHF)" },
-  { id: "silver", label: "Silver" },
-  { id: "housing", label: "Housing basket" },
-  { id: "energy", label: "Energy basket" },
-  { id: "custom", label: "Custom basket" },
-];
+const CUSTOM_UNIT_OPTION = { id: "custom", label: "Custom basket" };
 
-const SERIES_ENDPOINTS = {
-  "SPX::gold": "/ratios/sp500-gold",
-  "SPY::gold": "/ratios/sp500-gold",
-  "SPX::usd": "/ratios/sp500-usd",
-  "SPY::usd": "/ratios/sp500-usd",
-  "SPX::chf": "/ratios/sp500-chf",
-  "SPY::chf": "/ratios/sp500-chf",
-  "GOLD::usd": "/ratios/gold-usd",
+const FALLBACK_CAPABILITIES = {
+  assets: [
+    {
+      id: "SPX",
+      label: "S&P 500 Index (SPX)",
+      units: [
+        { id: "gold", label: "Gold", endpoint: "/ratios/sp500-gold" },
+        { id: "usd", label: "USD", endpoint: "/ratios/sp500-usd" },
+        { id: "chf", label: "Swiss franc (CHF)", endpoint: "/ratios/sp500-chf" },
+      ],
+    },
+    {
+      id: "SPY",
+      label: "SPDR S&P 500 ETF (SPY)",
+      units: [
+        { id: "gold", label: "Gold", endpoint: "/ratios/sp500-gold" },
+        { id: "usd", label: "USD", endpoint: "/ratios/sp500-usd" },
+        { id: "chf", label: "Swiss franc (CHF)", endpoint: "/ratios/sp500-chf" },
+      ],
+    },
+    {
+      id: "GOLD",
+      label: "Gold",
+      units: [
+        {
+          id: "usd",
+          label: "USD",
+          default_variant_id: "ounce",
+          variants: [
+            {
+              id: "ounce",
+              label: "Troy ounce",
+              chart_label: "USD per troy ounce",
+              endpoint: "/ratios/gold-usd",
+            },
+            {
+              id: "kilogram",
+              label: "Kilogram",
+              chart_label: "USD per kilogram",
+              endpoint: "/ratios/gold-usd-kg",
+            },
+            {
+              id: "gram",
+              label: "Gram",
+              chart_label: "USD per gram",
+              endpoint: "/ratios/gold-usd-gram",
+            },
+          ],
+        },
+      ],
+    },
+  ],
 };
-
-const TROY_OUNCES_PER_KILOGRAM = 32.1507466;
-const GRAMS_PER_TROY_OUNCE = 31.1034768;
-
-const GOLD_VARIANT_OPTIONS = [
-  {
-    id: "ounce",
-    label: "Troy ounce",
-    chartLabel: "USD per troy ounce",
-  },
-  {
-    id: "kilogram",
-    label: "Kilogram",
-    chartLabel: "USD per kilogram",
-  },
-  {
-    id: "gram",
-    label: "Gram",
-    chartLabel: "USD per gram",
-  },
-];
-
-const GOLD_VARIANTS = GOLD_VARIANT_OPTIONS.map(({ id, label, chartLabel }) => ({
-  id,
-  label,
-  chartLabel,
-}));
-
-const UNIT_VARIANTS = {
-  gold: {
-    default: "ounce",
-    options: GOLD_VARIANT_OPTIONS.map(({ id, label, chartLabel }) => ({
-      id,
-      label,
-      chartLabel,
-      transform: (value) => {
-        switch (id) {
-          case "kilogram":
-            return value / TROY_OUNCES_PER_KILOGRAM;
-          case "gram":
-            return value * GRAMS_PER_TROY_OUNCE;
-          default:
-            return value;
-        }
-      },
-    })),
-  },
-};
-
-function applyUnitVariantToSeries(series, unitId, variantId) {
-  if (!series) {
-    return series;
-  }
-
-  const config = UNIT_VARIANTS[unitId];
-  if (!config) {
-    return series;
-  }
-
-  const targetId = variantId ?? config.default;
-  const variant =
-    config.options.find((option) => option.id === targetId) ??
-    config.options.find((option) => option.id === config.default);
-
-  if (!variant?.transform || !Array.isArray(series.points)) {
-    return variant ? { ...series } : series;
-  }
-
-  return {
-    ...series,
-    points: series.points.map((point) => ({
-      ...point,
-      value: variant.transform(point.value),
-    })),
-  };
-}
 
 const BASKET_RESOURCES = [
   { id: "gold", label: "Gold bullion", category: "Metals" },
@@ -115,73 +73,256 @@ const BASKET_RESOURCES = [
 ];
 
 export default function HomePage() {
+  const [capabilityState, setCapabilityState] = useState({
+    status: "loading",
+    data: FALLBACK_CAPABILITIES,
+    error: "",
+  });
   const [selectedAsset, setSelectedAsset] = useState(
-    () => AVAILABLE_ASSETS[0]?.id ?? null
+    FALLBACK_CAPABILITIES.assets[0]?.id ?? null
   );
-  const [selectedUnit, setSelectedUnit] = useState(PRICING_UNITS[0].id);
-  const [customBasketItems, setCustomBasketItems] = useState([]);
-  const [rawSeries, setRawSeries] = useState(null);
+  const [selectedUnit, setSelectedUnit] = useState(
+    FALLBACK_CAPABILITIES.assets[0]?.units?.[0]?.id ?? CUSTOM_UNIT_OPTION.id
+  );
+  const [selectedVariant, setSelectedVariant] = useState(null);
   const [series, setSeries] = useState(null);
   const [status, setStatus] = useState({ state: "idle", message: "" });
-  const [selectedGoldVariant, setSelectedGoldVariant] = useState(
-    GOLD_VARIANTS[0].id
-  );
-  const [selectedUnitVariant, setSelectedUnitVariant] = useState(
-    UNIT_VARIANTS[PRICING_UNITS[0].id]?.default ?? null
-  );
+  const [customBasketItems, setCustomBasketItems] = useState([]);
 
   const apiBaseUrl = useMemo(
     () => import.meta.env.VITE_API_URL ?? "http://localhost:8000",
     []
   );
 
-  const activeAsset = useMemo(
-    () => AVAILABLE_ASSETS.find((option) => option.id === selectedAsset) ?? null,
-    [selectedAsset]
-  );
+  useEffect(() => {
+    let cancelled = false;
 
-  const activeUnit = useMemo(
-    () => PRICING_UNITS.find((option) => option.id === selectedUnit) ?? null,
-    [selectedUnit]
-  );
+    async function loadCapabilities() {
+      setCapabilityState((current) => ({
+        status: "loading",
+        data: current.data,
+        error: "",
+      }));
 
-  const activeGoldVariant = useMemo(
-    () => GOLD_VARIANTS.find((option) => option.id === selectedGoldVariant) ?? null,
-    [selectedGoldVariant]
-  );
-
-  const activeUnitVariant = useMemo(() => {
-    const config = UNIT_VARIANTS[selectedUnit];
-    if (!config) {
-      return null;
+      try {
+        const response = await fetch(`${apiBaseUrl}/metadata/capabilities`, {
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          throw new Error(`Capabilities request failed with ${response.status}`);
+        }
+        const payload = await response.json();
+        if (cancelled) {
+          return;
+        }
+        setCapabilityState({ status: "loaded", data: payload, error: "" });
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        setCapabilityState({
+          status: "error",
+          data: FALLBACK_CAPABILITIES,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Unable to load capability matrix.",
+        });
+      }
     }
-    const targetId = selectedUnitVariant ?? config.default;
-    return (
-      config.options.find((option) => option.id === targetId) ??
-      config.options.find((option) => option.id === config.default) ??
-      null
-    );
-  }, [selectedUnit, selectedUnitVariant]);
+
+    loadCapabilities();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apiBaseUrl]);
+
+  const capabilities = capabilityState.data;
+
+  const assetOptions = useMemo(
+    () =>
+      (capabilities?.assets ?? []).map(({ id, label }) => ({
+        id,
+        label,
+      })),
+    [capabilities]
+  );
 
   useEffect(() => {
-    const config = UNIT_VARIANTS[selectedUnit];
-    if (!config) {
-      setSelectedUnitVariant(null);
+    if (!assetOptions.length) {
+      setSelectedAsset(null);
       return;
     }
-    setSelectedUnitVariant((current) => {
-      if (!current) {
-        return config.default;
+    setSelectedAsset((current) => {
+      if (current && assetOptions.some((option) => option.id === current)) {
+        return current;
       }
-      return config.options.some((option) => option.id === current)
-        ? current
-        : config.default;
+      return assetOptions[0].id;
     });
-  }, [selectedUnit]);
+  }, [assetOptions]);
+
+  const activeAsset = useMemo(
+    () => assetOptions.find((option) => option.id === selectedAsset) ?? null,
+    [assetOptions, selectedAsset]
+  );
+
+  const assetCapability = useMemo(() => {
+    if (!capabilities) {
+      return null;
+    }
+    return (
+      capabilities.assets.find((asset) => asset.id === selectedAsset) ?? null
+    );
+  }, [capabilities, selectedAsset]);
+
+  const unitOptions = useMemo(
+    () =>
+      (assetCapability?.units ?? []).map(({ id, label }) => ({
+        id,
+        label,
+      })),
+    [assetCapability]
+  );
+
+  const unitSelectOptions = useMemo(() => {
+    if (!unitOptions.length) {
+      return [CUSTOM_UNIT_OPTION];
+    }
+    return [...unitOptions, CUSTOM_UNIT_OPTION];
+  }, [unitOptions]);
 
   useEffect(() => {
-    if (selectedUnit === "custom") {
-      setRawSeries(null);
+    if (!unitOptions.length) {
+      setSelectedUnit(CUSTOM_UNIT_OPTION.id);
+      return;
+    }
+    setSelectedUnit((current) => {
+      if (current === CUSTOM_UNIT_OPTION.id) {
+        return current;
+      }
+      return unitOptions.some((option) => option.id === current)
+        ? current
+        : unitOptions[0].id;
+    });
+  }, [unitOptions]);
+
+  useEffect(() => {
+    if (selectedUnit === null && unitOptions.length) {
+      setSelectedUnit(unitOptions[0].id);
+    } else if (selectedUnit === null && !unitOptions.length) {
+      setSelectedUnit(CUSTOM_UNIT_OPTION.id);
+    }
+  }, [selectedUnit, unitOptions]);
+
+  const activeUnit = useMemo(
+    () =>
+      unitSelectOptions.find((option) => option.id === selectedUnit) ?? null,
+    [unitSelectOptions, selectedUnit]
+  );
+
+  const unitCapability = useMemo(() => {
+    if (!assetCapability || !selectedUnit || selectedUnit === CUSTOM_UNIT_OPTION.id) {
+      return null;
+    }
+    return (
+      assetCapability.units.find((unit) => unit.id === selectedUnit) ?? null
+    );
+  }, [assetCapability, selectedUnit]);
+
+  const variantOptions = useMemo(
+    () => unitCapability?.variants ?? [],
+    [unitCapability]
+  );
+
+  useEffect(() => {
+    if (!unitCapability?.variants?.length) {
+      setSelectedVariant(null);
+      return;
+    }
+
+    setSelectedVariant((current) => {
+      if (
+        current &&
+        unitCapability.variants.some((variant) => variant.id === current)
+      ) {
+        return current;
+      }
+      return (
+        unitCapability.default_variant_id ??
+        unitCapability.variants[0]?.id ??
+        null
+      );
+    });
+  }, [unitCapability]);
+
+  const activeVariant = useMemo(() => {
+    if (!variantOptions.length) {
+      return null;
+    }
+
+    if (selectedVariant) {
+      const match = variantOptions.find(
+        (variant) => variant.id === selectedVariant
+      );
+      if (match) {
+        return match;
+      }
+    }
+
+    if (unitCapability?.default_variant_id) {
+      const fallback = variantOptions.find(
+        (variant) => variant.id === unitCapability.default_variant_id
+      );
+      if (fallback) {
+        return fallback;
+      }
+    }
+
+    return variantOptions[0] ?? null;
+  }, [selectedVariant, unitCapability?.default_variant_id, variantOptions]);
+
+  const unitStatusLabel = useMemo(() => {
+    if (selectedUnit === CUSTOM_UNIT_OPTION.id) {
+      return activeUnit?.label ?? "custom basket";
+    }
+    if (activeVariant?.label && activeUnit?.label) {
+      return `${activeUnit.label} (${activeVariant.label})`;
+    }
+    return activeUnit?.label ?? selectedUnit ?? "unit";
+  }, [activeUnit, activeVariant?.label, selectedUnit]);
+
+  const unitDescriptor = useMemo(() => {
+    if (selectedUnit === CUSTOM_UNIT_OPTION.id) {
+      return activeUnit?.label ?? "Custom basket";
+    }
+    if (activeVariant?.chart_label) {
+      return activeVariant.chart_label;
+    }
+    if (activeVariant?.label && activeUnit?.label) {
+      return `${activeUnit.label} (${activeVariant.label})`;
+    }
+    return activeUnit?.label ?? selectedUnit ?? "unit";
+  }, [activeUnit, activeVariant, selectedUnit]);
+
+  const resolvedEndpoint = useMemo(() => {
+    if (!unitCapability || selectedUnit === CUSTOM_UNIT_OPTION.id) {
+      return null;
+    }
+    if (variantOptions.length) {
+      const preferred =
+        variantOptions.find((variant) => variant.id === selectedVariant) ??
+        variantOptions.find(
+          (variant) => variant.id === unitCapability.default_variant_id
+        ) ??
+        variantOptions[0];
+      return preferred?.endpoint ?? null;
+    }
+    return unitCapability.endpoint ?? null;
+  }, [selectedUnit, selectedVariant, unitCapability, variantOptions]);
+
+  useEffect(() => {
+    if (selectedUnit === CUSTOM_UNIT_OPTION.id) {
       setSeries(null);
       setStatus({
         state: "idle",
@@ -194,52 +335,45 @@ export default function HomePage() {
     }
 
     if (!selectedAsset || !selectedUnit) {
-      setRawSeries(null);
       setSeries(null);
       setStatus({ state: "idle", message: "Choose an asset to begin." });
       return;
     }
 
-    const assetLabel = activeAsset?.label ?? selectedAsset ?? "asset";
-    const unitLabel =
-      selectedAsset === "GOLD" && selectedUnit === "usd"
-        ? activeGoldVariant?.label ?? "USD"
-        : activeUnit?.label ?? "basket";
+    if (!resolvedEndpoint) {
+      const assetLabel = activeAsset?.label ?? selectedAsset ?? "asset";
+      setSeries(null);
+      setStatus({
+        state: "error",
+        message: `Pricing ${assetLabel} in ${unitStatusLabel} is not available yet.`,
+      });
+      return;
+    }
+
     let cancelled = false;
+    const assetLabel = activeAsset?.label ?? selectedAsset ?? "asset";
 
-    const unsupportedMessage = `Pricing ${assetLabel} in ${unitLabel} is not available yet.`;
-
-    async function fetchApiSeries(endpoint) {
+    async function fetchSeries() {
       setStatus({
         state: "loading",
-        message: `Loading ${assetLabel} priced in ${unitLabel}…`,
+        message: `Loading ${assetLabel} priced in ${unitStatusLabel}…`,
       });
 
       try {
-        const response = await fetch(`${apiBaseUrl}${endpoint}`);
+        const response = await fetch(`${apiBaseUrl}${resolvedEndpoint}`);
         if (!response.ok) {
           throw new Error(`Request failed with status ${response.status}`);
         }
-
         const payload = await response.json();
         if (cancelled) {
           return;
         }
-
-        setRawSeries(payload);
-        setSeries(
-          applyUnitVariantToSeries(
-            payload,
-            selectedUnit,
-            selectedUnitVariant
-          )
-        );
+        setSeries(payload);
         setStatus({ state: "loaded", message: "" });
       } catch (error) {
         if (cancelled) {
           return;
         }
-        setRawSeries(null);
         setSeries(null);
         setStatus({
           state: "error",
@@ -249,80 +383,37 @@ export default function HomePage() {
       }
     }
 
-    let endpoint = SERIES_ENDPOINTS[`${selectedAsset}::${selectedUnit}`];
-
-    if (selectedAsset === "GOLD") {
-      if (selectedUnit !== "usd") {
-        endpoint = null;
-      } else {
-        endpoint = {
-          kilogram: "/ratios/gold-usd-kg",
-          gram: "/ratios/gold-usd-gram",
-          ounce: "/ratios/gold-usd",
-        }[selectedGoldVariant] ?? "/ratios/gold-usd";
-      }
-    }
-
-    if (!endpoint) {
-      setRawSeries(null);
-      setSeries(null);
-      setStatus({
-        state: "error",
-        message: unsupportedMessage,
-      });
-      return;
-    }
-
-    fetchApiSeries(endpoint);
+    fetchSeries();
 
     return () => {
       cancelled = true;
     };
   }, [
     apiBaseUrl,
-    activeUnit?.label,
-    activeGoldVariant?.label,
+    activeAsset?.label,
     customBasketItems.length,
+    resolvedEndpoint,
     selectedAsset,
     selectedUnit,
-    selectedGoldVariant,
+    unitStatusLabel,
   ]);
-
-  useEffect(() => {
-    if (!rawSeries) {
-      setSeries(null);
-      return;
-    }
-
-    setSeries(
-      applyUnitVariantToSeries(rawSeries, selectedUnit, selectedUnitVariant)
-    );
-  }, [rawSeries, selectedUnit, selectedUnitVariant]);
 
   const chartTitle = useMemo(() => {
     if (!activeAsset || !activeUnit) {
       return "Asset priced in goods";
     }
 
-    if (selectedUnit === "custom") {
+    if (selectedUnit === CUSTOM_UNIT_OPTION.id) {
       return `${activeAsset.label} priced in your custom basket`;
     }
 
-    if (activeAsset.id === "GOLD" && selectedUnit === "usd") {
-      const descriptor =
-        activeGoldVariant?.chartLabel ??
-        (activeGoldVariant?.label
-          ? `USD per ${activeGoldVariant.label.toLowerCase()}`
-          : activeUnit.label);
-      return `${activeAsset.label} priced in ${descriptor}`;
-    }
-
-    const unitDescriptor = activeUnitVariant
-      ? activeUnitVariant.chartLabel ?? `${activeUnit.label} (${activeUnitVariant.label})`
-      : activeUnit.label;
-
     return `${activeAsset.label} priced in ${unitDescriptor}`;
-  }, [activeAsset, activeGoldVariant?.label, activeUnit, activeUnitVariant, selectedUnit]);
+  }, [activeAsset, activeUnit, selectedUnit, unitDescriptor]);
+
+  const capabilityWarning =
+    capabilityState.status === "error" && capabilityState.error
+      ? `Capabilities unavailable (${capabilityState.error}). Showing fallback options.`
+      : null;
 
   return (
     <section className="site-wrap chart-section">
@@ -338,7 +429,7 @@ export default function HomePage() {
           </span>
           <span className="data-attribution__tooltip">
             FRED, Federal Reserve Bank of St. Louis. This product uses the FRED® API but is not
-            endorsed or certified by the Federal Reserve Bank of St. Louis. {" "}
+            endorsed or certified by the Federal Reserve Bank of St. Louis.{" "}
             <a
               href="https://fred.stlouisfed.org/docs/api/terms_of_use.html"
               target="_blank"
@@ -352,12 +443,13 @@ export default function HomePage() {
       </div>
       <div className="selector-row">
         <AssetSelector
+          options={assetOptions}
           selectedAsset={selectedAsset}
           onSelectionChange={setSelectedAsset}
         />
         <span className="selector-row__separator">priced in</span>
         <SearchSelect
-          options={PRICING_UNITS}
+          options={unitSelectOptions}
           value={selectedUnit}
           onChange={setSelectedUnit}
           placeholder="Search units"
@@ -365,32 +457,11 @@ export default function HomePage() {
           allowEmpty
         />
       </div>
-
-      {selectedAsset === "GOLD" && selectedUnit === "usd" ? (
-        <div className="variant-picker">
-          <span className="variant-picker__label">Gold metric</span>
-          <div
-            className="range-toggle"
-            role="group"
-            aria-label="Select gold measurement"
-          >
-            {GOLD_VARIANTS.map((variant) => (
-              <button
-                key={variant.id}
-                type="button"
-                className={`range-toggle__button${
-                  selectedGoldVariant === variant.id ? " is-active" : ""
-                }`}
-                onClick={() => setSelectedGoldVariant(variant.id)}
-              >
-                {variant.label}
-              </button>
-            ))}
-          </div>
-        </div>
+      {capabilityWarning ? (
+        <p className="selector-row__notice">{capabilityWarning}</p>
       ) : null}
 
-      {UNIT_VARIANTS[selectedUnit] ? (
+      {variantOptions.length ? (
         <div className="variant-picker">
           <span className="variant-picker__label">
             {`${activeUnit?.label ?? "Unit"} measurement`}
@@ -400,23 +471,23 @@ export default function HomePage() {
             role="group"
             aria-label={`Select ${activeUnit?.label ?? "unit"} measurement`}
           >
-            {UNIT_VARIANTS[selectedUnit].options.map((option) => (
+            {variantOptions.map((variant) => (
               <button
-                key={option.id}
+                key={variant.id}
                 type="button"
                 className={`range-toggle__button${
-                  selectedUnitVariant === option.id ? " is-active" : ""
+                  (activeVariant?.id ?? null) === variant.id ? " is-active" : ""
                 }`}
-                onClick={() => setSelectedUnitVariant(option.id)}
+                onClick={() => setSelectedVariant(variant.id)}
               >
-                {option.label}
+                {variant.label}
               </button>
             ))}
           </div>
         </div>
       ) : null}
 
-      {selectedUnit === "custom" ? (
+      {selectedUnit === CUSTOM_UNIT_OPTION.id ? (
         <div className="builder-shell">
           <CustomBasketBuilder
             resources={BASKET_RESOURCES}
