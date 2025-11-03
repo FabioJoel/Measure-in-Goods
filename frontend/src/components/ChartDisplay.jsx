@@ -26,16 +26,22 @@ function formatValue(value, { compact = false } = {}) {
     return "—";
   }
 
-  if (compact) {
-    return new Intl.NumberFormat("en-US", {
-      notation: "compact",
-      maximumFractionDigits: 1,
-    }).format(value);
-  }
+  try {
+    if (compact) {
+      return new Intl.NumberFormat("en-US", {
+        notation: "compact",
+        maximumFractionDigits: 1,
+      }).format(value);
+    }
 
-  return new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: value >= 1000 ? 0 : 2,
-  }).format(value);
+    return new Intl.NumberFormat("en-US", {
+      maximumFractionDigits: value >= 1000 ? 0 : 2,
+    }).format(value);
+  } catch (_error) {
+    return value.toLocaleString("en-US", {
+      maximumFractionDigits: compact ? 1 : value >= 1000 ? 0 : 2,
+    });
+  }
 }
 
 function normalizeSeries(points = []) {
@@ -191,7 +197,8 @@ export default function ChartDisplay({ meta, series, status }) {
   const [hoverIndex, setHoverIndex] = useState(null);
 
   useEffect(() => {
-    if (!chartRef.current) {
+    const element = chartRef.current;
+    if (!element || typeof ResizeObserver === "undefined") {
       return;
     }
 
@@ -210,7 +217,7 @@ export default function ChartDisplay({ meta, series, status }) {
       setSize({ width: nextWidth, height: nextHeight });
     });
 
-    observer.observe(chartRef.current);
+    observer.observe(element);
     return () => observer.disconnect();
   }, []);
 
