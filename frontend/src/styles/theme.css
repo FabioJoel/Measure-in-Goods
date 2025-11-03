@@ -356,6 +356,52 @@ a {
   letter-spacing: -0.01em;
 }
 
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.chart-header__aside {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.chart-change {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.chart-change__label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.chart-change__value {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.chart-change__value.is-positive {
+  color: var(--accent);
+}
+
+.chart-change__value.is-negative {
+  color: var(--status-error);
+}
+
+.chart-change__percent {
+  margin-left: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
 
 .range-toggle {
   display: inline-flex;

@@ -327,11 +327,16 @@ export default function ChartDisplay({ meta, series, status }) {
 
   const tooltipLeft = tooltipPoint
     ? Math.min(
-        Math.max(tooltipPoint.x, CHART_MARGIN.left + 12),
+        Math.max(tooltipPoint.x + CHART_MARGIN.left, CHART_MARGIN.left + 12),
         geometry.width - 140
       )
     : 0;
 
+  const startPoint = geometry.chartPoints[0];
+  const endPoint = geometry.chartPoints[geometry.chartPoints.length - 1];
+  const absoluteChange = endPoint.value - startPoint.value;
+  const percentChange =
+    startPoint.value !== 0 ? (absoluteChange / startPoint.value) * 100 : 0;
   return (
     <div className="chart-display">
       <div className="chart-header">
@@ -339,23 +344,39 @@ export default function ChartDisplay({ meta, series, status }) {
           <h3>{meta?.name ?? series?.name ?? "Basket"}</h3>
           <p>{rangeLabel} range</p>
         </div>
-        <div
-          className="range-toggle"
-          role="group"
-          aria-label="Select time range"
-        >
-          {RANGE_OPTIONS.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              className={`range-toggle__button${
-                rangeId === option.id ? " is-active" : ""
+        <div className="chart-header__aside">
+          <div className="chart-change">
+            <span className="chart-change__label">Change</span>
+            <span
+              className={`chart-change__value${
+                absoluteChange >= 0 ? " is-positive" : " is-negative"
               }`}
-              onClick={() => setRangeId(option.id)}
             >
-              {option.label}
-            </button>
-          ))}
+              {absoluteChange >= 0 ? "+" : ""}
+              {formatValue(absoluteChange)}
+              <span className="chart-change__percent">
+                ({percentChange.toFixed(2)}%)
+              </span>
+            </span>
+          </div>
+          <div
+            className="range-toggle"
+            role="group"
+            aria-label="Select time range"
+          >
+            {RANGE_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={`range-toggle__button${
+                  rangeId === option.id ? " is-active" : ""
+                }`}
+                onClick={() => setRangeId(option.id)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
