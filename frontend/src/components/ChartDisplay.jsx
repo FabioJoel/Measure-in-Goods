@@ -306,11 +306,6 @@ export default function ChartDisplay({ meta, series, status }) {
     hoverIndex != null
       ? geometry.chartPoints[hoverIndex]
       : geometry.chartPoints[geometry.chartPoints.length - 1];
-  const startPoint = geometry.chartPoints[0];
-  const absoluteChange = pointForDisplay.value - startPoint.value;
-  const percentChange =
-    startPoint.value !== 0 ? (absoluteChange / startPoint.value) * 100 : 0;
-  const changeIsPositive = absoluteChange >= 0;
 
   const handlePointerMove = (event) => {
     if (!geometry.chartPoints.length) {
@@ -342,9 +337,7 @@ export default function ChartDisplay({ meta, series, status }) {
       <div className="chart-header">
         <div className="chart-header__meta">
           <h3>{meta?.name ?? series?.name ?? "Basket"}</h3>
-          <p>
-            {rangeLabel} range · {filteredPoints.length} observations
-          </p>
+          <p>{rangeLabel} range</p>
         </div>
         <div
           className="range-toggle"
@@ -374,21 +367,6 @@ export default function ChartDisplay({ meta, series, status }) {
           </strong>
           <span className="chart-summary__date">
             {LONG_DATE_FORMATTER.format(pointForDisplay.date)}
-          </span>
-        </div>
-        <div
-          className={`chart-summary__group chart-summary__group--change${
-            changeIsPositive ? " is-positive" : " is-negative"
-          }`}
-        >
-          <span className="chart-summary__label">Change ({rangeLabel})</span>
-          <strong className="chart-summary__value">
-            {changeIsPositive ? "+" : ""}
-            {formatValue(absoluteChange)}
-          </strong>
-          <span className="chart-summary__date">
-            {changeIsPositive ? "+" : ""}
-            {percentChange.toFixed(2)}%
           </span>
         </div>
       </div>
