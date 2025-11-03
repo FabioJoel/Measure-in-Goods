@@ -342,41 +342,38 @@ export default function ChartDisplay({ meta, series, status }) {
       <div className="chart-header">
         <div className="chart-header__meta">
           <h3>{meta?.name ?? series?.name ?? "Basket"}</h3>
-          <p>{rangeLabel} range</p>
-        </div>
-        <div className="chart-header__aside">
-          <div className="chart-change">
-            <span className="chart-change__label">Change</span>
+          <div className="chart-header__meta-row">
+            <p>{rangeLabel} range</p>
             <span
-              className={`chart-change__value${
+              className={`chart-change-inline${
                 absoluteChange >= 0 ? " is-positive" : " is-negative"
               }`}
             >
               {absoluteChange >= 0 ? "+" : ""}
               {formatValue(absoluteChange)}
-              <span className="chart-change__percent">
+              <span className="chart-change-inline__percent">
                 ({percentChange.toFixed(2)}%)
               </span>
             </span>
           </div>
-          <div
-            className="range-toggle"
-            role="group"
-            aria-label="Select time range"
-          >
-            {RANGE_OPTIONS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className={`range-toggle__button${
-                  rangeId === option.id ? " is-active" : ""
-                }`}
-                onClick={() => setRangeId(option.id)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
+        </div>
+        <div
+          className="range-toggle"
+          role="group"
+          aria-label="Select time range"
+        >
+          {RANGE_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={`range-toggle__button${
+                rangeId === option.id ? " is-active" : ""
+              }`}
+              onClick={() => setRangeId(option.id)}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
       </div>
 

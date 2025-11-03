@@ -363,44 +363,33 @@ a {
   gap: 18px;
 }
 
-.chart-header__aside {
+.chart-header__meta-row {
   display: flex;
-  flex-direction: column;
   gap: 12px;
-  align-items: flex-end;
+  align-items: baseline;
+  margin-top: 6px;
 }
 
-.chart-change {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-}
-
-.chart-change__label {
-  font-size: 11px;
-  letter-spacing: 0.08em;
+.chart-change-inline {
+  font-size: 14px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--muted);
-}
-
-.chart-change__value {
-  font-size: 18px;
   font-weight: 600;
 }
 
-.chart-change__value.is-positive {
+.chart-change-inline.is-positive {
   color: var(--accent);
 }
 
-.chart-change__value.is-negative {
+.chart-change-inline.is-negative {
   color: var(--status-error);
 }
 
-.chart-change__percent {
+.chart-change-inline__percent {
   margin-left: 6px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
+  text-transform: none;
 }
 
 .range-toggle {
