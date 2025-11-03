@@ -72,6 +72,15 @@ function App() {
             About
           </NavLink>
         </nav>
+        <div className="site-nav__section">
+          <span className="site-nav__section-title">Coming soon</span>
+          <ul className="site-nav__coming-list">
+            <li>Custom commodity baskets</li>
+            <li>CPI benchmark baskets</li>
+            <li>ANCAP commodity standard</li>
+            <li>Regional home price lenses</li>
+          </ul>
+        </div>
       </aside>
 
       <main className="site-main">
