@@ -12,6 +12,8 @@ from data.sample_series import (
     get_usd_chf_series,
 )
 
+TROY_OUNCES_PER_KILOGRAM = 32.1507466
+
 
 class PricingEngine:
     """Compute blended baskets using normalized asset data."""
@@ -62,13 +64,25 @@ class PricingEngine:
         return BasketComposition(name="sp500-in-chf", points=converted)
 
     def compute_gold_in_usd(self) -> BasketComposition:
-        """Return gold priced in USD using sample data."""
+        """Return gold priced in USD per troy ounce."""
 
         points = [
             BasketSeriesPoint(timestamp=point.timestamp, value=point.value)
             for point in get_gold_series()
         ]
-        return BasketComposition(name="gold-in-usd", points=points)
+        return BasketComposition(name="gold-in-usd-per-troy-ounce", points=points)
+
+    def compute_gold_in_usd_per_kg(self) -> BasketComposition:
+        """Return gold priced in USD per kilogram."""
+
+        points = [
+            BasketSeriesPoint(
+                timestamp=point.timestamp,
+                value=point.value * TROY_OUNCES_PER_KILOGRAM,
+            )
+            for point in get_gold_series()
+        ]
+        return BasketComposition(name="gold-in-usd-per-kg", points=points)
 
     def _compute_ratio(
         self,

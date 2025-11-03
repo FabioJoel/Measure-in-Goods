@@ -64,6 +64,13 @@ def sp500_in_chf(engine: pricing.PricingEngine = Depends(get_pricing_engine)) ->
 
 @app.get("/ratios/gold-usd", response_model=BasketComposition)
 def gold_in_usd(engine: pricing.PricingEngine = Depends(get_pricing_engine)) -> BasketComposition:
-    """Return gold priced in USD."""
+    """Return gold priced in USD per troy ounce."""
 
     return engine.compute_gold_in_usd()
+
+
+@app.get("/ratios/gold-usd-kg", response_model=BasketComposition)
+def gold_in_usd_per_kg(engine: pricing.PricingEngine = Depends(get_pricing_engine)) -> BasketComposition:
+    """Return gold priced in USD per kilogram."""
+
+    return engine.compute_gold_in_usd_per_kg()

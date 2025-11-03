@@ -24,8 +24,13 @@ const SERIES_ENDPOINTS = {
   "SPY::usd": "/ratios/sp500-usd",
   "SPX::chf": "/ratios/sp500-chf",
   "SPY::chf": "/ratios/sp500-chf",
-  "XAUUSD::usd": "/ratios/gold-usd",
+  "GOLD::usd": "/ratios/gold-usd",
 };
+
+const GOLD_VARIANTS = [
+  { id: "ounce", label: "Spot price (USD/oz troy)" },
+  { id: "kilogram", label: "Price per kilogram (USD/kg)" },
+];
 
 const BASKET_RESOURCES = [
   { id: "gold", label: "Gold bullion", category: "Metals" },
@@ -46,6 +51,9 @@ export default function HomePage() {
   const [customBasketItems, setCustomBasketItems] = useState([]);
   const [series, setSeries] = useState(null);
   const [status, setStatus] = useState({ state: "idle", message: "" });
+  const [selectedGoldVariant, setSelectedGoldVariant] = useState(
+    GOLD_VARIANTS[0].id
+  );
 
   const apiBaseUrl = useMemo(
     () => import.meta.env.VITE_API_URL ?? "http://localhost:8000",
@@ -60,6 +68,11 @@ export default function HomePage() {
   const activeUnit = useMemo(
     () => PRICING_UNITS.find((option) => option.id === selectedUnit) ?? null,
     [selectedUnit]
+  );
+
+  const activeGoldVariant = useMemo(
+    () => GOLD_VARIANTS.find((option) => option.id === selectedGoldVariant) ?? null,
+    [selectedGoldVariant]
   );
 
   useEffect(() => {
@@ -81,15 +94,19 @@ export default function HomePage() {
       return;
     }
 
-    const unitLabel = activeUnit?.label ?? "basket";
+    const assetLabel = activeAsset?.label ?? selectedAsset ?? "asset";
+    const unitLabel =
+      selectedAsset === "GOLD" && selectedUnit === "usd"
+        ? activeGoldVariant?.label ?? "USD"
+        : activeUnit?.label ?? "basket";
     let cancelled = false;
 
-    const unsupportedMessage = `Pricing ${selectedAsset} in ${unitLabel} is not available yet.`;
+    const unsupportedMessage = `Pricing ${assetLabel} in ${unitLabel} is not available yet.`;
 
     async function fetchApiSeries(endpoint) {
       setStatus({
         state: "loading",
-        message: `Loading ${selectedAsset} priced in ${unitLabel}…`,
+        message: `Loading ${assetLabel} priced in ${unitLabel}…`,
       });
 
       try {
@@ -118,7 +135,19 @@ export default function HomePage() {
       }
     }
 
-    const endpoint = SERIES_ENDPOINTS[`${selectedAsset}::${selectedUnit}`];
+    let endpoint = SERIES_ENDPOINTS[`${selectedAsset}::${selectedUnit}`];
+
+    if (selectedAsset === "GOLD") {
+      if (selectedUnit !== "usd") {
+        endpoint = null;
+      } else {
+        endpoint =
+          selectedGoldVariant === "kilogram"
+            ? "/ratios/gold-usd-kg"
+            : "/ratios/gold-usd";
+      }
+    }
+
     if (!endpoint) {
       setSeries(null);
       setStatus({
@@ -136,17 +165,28 @@ export default function HomePage() {
   }, [
     apiBaseUrl,
     activeUnit?.label,
+    activeGoldVariant?.label,
     customBasketItems.length,
     selectedAsset,
     selectedUnit,
+    selectedGoldVariant,
   ]);
 
-  const chartTitle =
-    activeAsset && activeUnit
-      ? selectedUnit === "custom"
-        ? `${activeAsset.label} priced in your custom basket`
-        : `${activeAsset.label} priced in ${activeUnit.label}`
-      : "Asset priced in goods";
+  const chartTitle = useMemo(() => {
+    if (!activeAsset || !activeUnit) {
+      return "Asset priced in goods";
+    }
+
+    if (selectedUnit === "custom") {
+      return `${activeAsset.label} priced in your custom basket`;
+    }
+
+    if (activeAsset.id === "GOLD" && selectedUnit === "usd") {
+      return `${activeAsset.label} priced in ${activeGoldVariant?.label ?? activeUnit.label}`;
+    }
+
+    return `${activeAsset.label} priced in ${activeUnit.label}`;
+  }, [activeAsset, activeGoldVariant?.label, activeUnit, selectedUnit]);
 
   return (
     <section className="site-wrap chart-section">
@@ -189,6 +229,30 @@ export default function HomePage() {
           allowEmpty
         />
       </div>
+
+      {selectedAsset === "GOLD" && selectedUnit === "usd" ? (
+        <div className="gold-variant-picker">
+          <span className="gold-variant-picker__label">Gold metric</span>
+          <div
+            className="range-toggle"
+            role="group"
+            aria-label="Select gold measurement"
+          >
+            {GOLD_VARIANTS.map((variant) => (
+              <button
+                key={variant.id}
+                type="button"
+                className={`range-toggle__button${
+                  selectedGoldVariant === variant.id ? " is-active" : ""
+                }`}
+                onClick={() => setSelectedGoldVariant(variant.id)}
+              >
+                {variant.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {selectedUnit === "custom" ? (
         <div className="builder-shell">

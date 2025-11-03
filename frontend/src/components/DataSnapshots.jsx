@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+const TROY_OUNCES_PER_KILOGRAM = 32.1507466;
+
 const buildUrl = (path) => {
   const base = import.meta.env.BASE_URL ?? "/";
   const normalized = path.startsWith("/") ? path.slice(1) : path;
@@ -58,8 +60,16 @@ function formatNumber(value) {
 function SeriesCard({ title, path }) {
   const { status, rows } = useSeries(path);
 
-  const latest = rows.at(-1);
-  const previous = rows.at(-2);
+  const displayRows =
+    path === "data/xauusd.json"
+      ? rows.map((entry) => ({
+          ...entry,
+          value: entry.value * TROY_OUNCES_PER_KILOGRAM,
+        }))
+      : rows;
+
+  const latest = displayRows.at(-1);
+  const previous = displayRows.at(-2);
 
   let body;
 
@@ -95,7 +105,7 @@ function SeriesCard({ title, path }) {
         ) : null}
         <div>
           <span className="data-card__label">Observations</span>
-          <strong>{rows.length}</strong>
+          <strong>{displayRows.length}</strong>
         </div>
       </div>
     );
@@ -120,7 +130,7 @@ export default function DataSnapshots({ sectionRef = null }) {
       <div className="data-snapshots__grid">
         <SeriesCard title="S&amp;P 500 index" path="data/sp500.json" />
         <SeriesCard
-          title="Gold spot price (XAUUSD)"
+          title="Gold spot price (XAUUSD, USD/kg)"
           path="data/xauusd.json"
         />
       </div>
