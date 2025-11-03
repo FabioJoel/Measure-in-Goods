@@ -41,6 +41,42 @@ The frontend automatically loads the S&P 500 in gold ratio and renders it as a
 table while charting components are under construction. The `VITE_API_URL`
 environment variable is optional—the UI defaults to `http://localhost:8000`
 when it is omitted.
+
+### Data provenance & FRED® API notice
+
+- S&P 500 price (SP500) and total return (SP500TR) series are retrieved from the
+  Federal Reserve Economic Data (FRED®) API.
+- This product uses the FRED® API but is not endorsed or certified by the
+  Federal Reserve Bank of St. Louis.
+- By using this application or any derivative dataset you agree to the
+  [FRED® API Terms of Use](https://fred.stlouisfed.org/docs/api/terms_of_use.html). Downstream users
+  must also comply with those terms, applicable export controls, and any other
+  relevant laws or third‑party agreements.
+- Applications built on top of this project should publish an appropriate
+  privacy policy if they collect user data and must link to the FRED® API Terms
+  of Use for their users.
+
+### Automated data refresh & deployment
+
+The repo ships with a GitHub Actions workflow (`.github/workflows/fetch-and-deploy.yml`) that:
+
+1. Fetches the S&P 500 price (`SP500`) and total-return (`SP500TR`) series via the
+   FRED® API.
+2. Writes the JSON payloads to `frontend/public/data/` so the frontend can load
+   them statically.
+3. Builds the Vite frontend and deploys it to GitHub Pages.
+
+To enable the automation you must add a repository secret named `FRED_API_KEY`
+containing your personal FRED API key (GitHub → *Settings → Secrets and variables → Actions*).
+You can also run the script locally:
+
+```bash
+FRED_API_KEY=your_key python data/fetch_sp500_fred.py --series-id SP500 --format json --output frontend/public/data/sp500.json
+```
+
+The frontend renders a “Daily snapshot” section so you can confirm the feeds
+once the workflow (or the local script) runs.
+
 A side project for valuing everything in terms of real-world goods.
 
 ## Abstract

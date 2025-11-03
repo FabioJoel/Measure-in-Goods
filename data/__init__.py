@@ -1,12 +1,10 @@
-"""Data source integrations for economic time series."""
+"""Data source utilities for economic time series."""
 
-from .fred import FredDataSource
+from .fred import TimeSeriesPoint
 from .sample_series import get_gold_series, get_sp500_series
-from .world_bank import WorldBankDataSource
 
 __all__ = [
-    "FredDataSource",
-    "WorldBankDataSource",
+    "TimeSeriesPoint",
     "get_gold_series",
     "get_sp500_series",
 ]

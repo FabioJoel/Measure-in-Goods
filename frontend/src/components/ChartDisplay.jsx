@@ -27,7 +27,32 @@ function ChartDisplay({ meta, series, status }) {
   if (status.state === "error") {
     return (
       <div className="chart-display">
-        <p className="status-message error">{status.message}</p>
+        <div className="chart-placeholder">
+          <div className="chart-placeholder__canvas" aria-hidden="true">
+            <svg viewBox="0 0 100 60" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="chartPlaceholderFill" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor="rgba(160, 184, 180, 0.3)" />
+                  <stop offset="100%" stopColor="rgba(160, 184, 180, 0)" />
+                </linearGradient>
+              </defs>
+              <polygon
+                points="0,55 10,52 20,46 30,50 40,38 50,44 60,30 70,36 80,24 90,32 100,18 100,60 0,60"
+                fill="url(#chartPlaceholderFill)"
+              />
+              <polyline
+                points="0,55 10,52 20,46 30,50 40,38 50,44 60,30 70,36 80,24 90,32 100,18"
+                fill="none"
+                stroke="rgba(160, 184, 180, 0.35)"
+                strokeWidth="0.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray="1.6 1.6"
+              />
+            </svg>
+          </div>
+          <p className="status-message error">{status.message}</p>
+        </div>
       </div>
     );
   }
